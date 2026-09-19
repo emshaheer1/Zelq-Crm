@@ -44,6 +44,7 @@ next-env.d.ts
 prisma/dev.db
 prisma/dev.db-journal
 prisma/init-postgres.sql
+prisma/.pw.json
 
 # editor / agent
 .cursor/

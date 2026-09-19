@@ -24,8 +24,8 @@ async function main() {
     prisma.user.create({
       data: {
         name: "Anjali",
-        email: "admin@zelq.com",
-        passwordHash: await password("ZelqAdmin!26"),
+        email: "admin",
+        passwordHash: await password("Anjali11@@@"),
         role: "ADMIN",
         designation: "Admin",
         avatarUrl: "/avatars/anjali.png",
@@ -35,8 +35,8 @@ async function main() {
     prisma.user.create({
       data: {
         name: "Muhammad Shaheer",
-        email: "manager@zelq.com",
-        passwordHash: await password("ZelqManager!26"),
+        email: "shaheer",
+        passwordHash: await password("webdeveloper11"),
         role: "MANAGER",
         designation: "Project Manager",
         avatarUrl: "/avatars/shaheer.png",
@@ -46,8 +46,8 @@ async function main() {
     prisma.user.create({
       data: {
         name: "Muhammad Umar",
-        email: "umar@zelq.com",
-        passwordHash: await password("ZelqEmployee!26"),
+        email: "umar",
+        passwordHash: await password("graphics"),
         role: "EMPLOYEE",
         designation: "Video & Graphics",
         avatarUrl: "/avatars/umar.png",
@@ -57,8 +57,8 @@ async function main() {
     prisma.user.create({
       data: {
         name: "Fatima Hassan",
-        email: "fatima@zelq.com",
-        passwordHash: await password("ZelqEmployee!26"),
+        email: "fatima",
+        passwordHash: await password("socialmedia11"),
         role: "EMPLOYEE",
         designation: "Social Media & Marketing",
         avatarUrl: "/avatars/fatima.png",

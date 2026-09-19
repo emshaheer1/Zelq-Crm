@@ -19,7 +19,7 @@ export async function loginAction(_: unknown, formData: FormData) {
   });
 
   if (!parsed.success) {
-    return { error: "Enter a valid email and password." };
+    return { error: "Enter a valid username and password." };
   }
 
   const user = await prisma.user.findUnique({
@@ -27,12 +27,12 @@ export async function loginAction(_: unknown, formData: FormData) {
   });
 
   if (!user || user.status !== "ACTIVE") {
-    return { error: "Invalid email or password." };
+    return { error: "Invalid username or password." };
   }
 
   const valid = await verifyPassword(parsed.data.password, user.passwordHash);
   if (!valid) {
-    return { error: "Invalid email or password." };
+    return { error: "Invalid username or password." };
   }
 
   await createSession(user.id);

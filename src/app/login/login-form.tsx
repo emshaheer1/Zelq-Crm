@@ -86,7 +86,7 @@ export function LoginForm() {
           <input
             id="email"
             name="email"
-            type="email"
+            type="text"
             required
             autoComplete="username"
             aria-invalid={invalid || undefined}

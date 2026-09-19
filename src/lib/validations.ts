@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().min(1).transform((value) => value.toLowerCase()),
   password: z.string().min(1),
 });
 
@@ -17,7 +17,7 @@ export const clientSchema = z.object({
 
 export const employeeSchema = z.object({
   name: z.string().min(2, "Name is required"),
-  email: z.string().email(),
+  email: z.string().trim().min(2).transform((value) => value.toLowerCase()),
   phone: z.string().optional(),
   role: z.enum(["ADMIN", "MANAGER", "EMPLOYEE"]),
   designation: z.string().optional(),

@@ -564,7 +564,7 @@ export function NewEmployeeDialog({
             <Input name="name" required />
           </Field>
           <Field label="Email">
-            <Input name="email" type="email" required />
+            <Input name="email" type="text" required />
           </Field>
           <Field label="Password">
             <Input name="password" type="password" required minLength={8} />
