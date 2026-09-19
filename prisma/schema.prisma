@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProjectStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  READY_FOR_REVIEW
+  REVISION_REQUIRED
+  COMPLETED
+  ON_HOLD
+}
+
+enum EventType {
+  MEETING
+  FOLLOW_UP
+  PROJECT_REVIEW
+  INTERNAL_MEETING
+  IMPORTANT_DEADLINE
+  OTHER
+}
+
+enum ReviewAction {
+  APPROVE
+  REQUEST_REVISION
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  DEADLINE_TOMORROW
+  TASK_OVERDUE
+  REVIEW_SUBMITTED
+  REVISION_REQUESTED
+  TASK_APPROVED
+  PROJECT_DEADLINE_APPROACHING
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  phone        String?
+  role         Role       @default(EMPLOYEE)
+  designation  String?
+  avatarUrl    String?
+  joiningDate  DateTime?
+  status       UserStatus @default(ACTIVE)
+  notifyInApp  Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  sessions           Session[]
+  managedProjects    Project[]                 @relation("ProjectManager")
+  projectMemberships ProjectMember[]
+  assignedTasks      Task[]                    @relation("TaskAssignee")
+  createdTasks       Task[]                    @relation("TaskAssigner")
+  driveUploads       Task[]                    @relation("TaskDriveUploader")
+  comments           TaskComment[]
+  activities         TaskActivity[]
+  reviews            TaskReview[]
+  eventAssignments   CalendarEventAssignee[]
+  notifications      Notification[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model CompanySettings {
+  id      String  @id @default("default")
+  name    String  @default("ZelQ Solutions")
+  tagline String  @default("Build. Automate. Scale.")
+  logoUrl String?
+  email   String  @default("contact@zelq.com")
+  phone   String  @default("+1 (872) 212-2691")
+}
+
+model Client {
+  id          String       @id @default(cuid())
+  name        String
+  companyName String?
+  email       String?
+  phone       String?
+  country     String?
+  status      ClientStatus @default(ACTIVE)
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  projects    Project[]
+  events      CalendarEvent[]
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  name           String
+  description    String?
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id])
+  managerId      String
+  manager        User          @relation("ProjectManager", fields: [managerId], references: [id])
+  startDate      DateTime?
+  deadline       DateTime?
+  priority       Priority      @default(MEDIUM)
+  status         ProjectStatus @default(NOT_STARTED)
+  driveFolderUrl String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  members        ProjectMember[]
+  tasks          Task[]
+  events         CalendarEvent[]
+}
+
+model ProjectMember {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Task {
+  id                String     @id @default(cuid())
+  title             String
+  description       String?
+  projectId         String
+  project           Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedToId      String
+  assignedTo        User       @relation("TaskAssignee", fields: [assignedToId], references: [id])
+  assignedById      String
+  assignedBy        User       @relation("TaskAssigner", fields: [assignedById], references: [id])
+  priority          Priority   @default(MEDIUM)
+  status            TaskStatus @default(PENDING)
+  startDate         DateTime?
+  deadline          DateTime?
+  completedAt       DateTime?
+  driveUploaded     Boolean    @default(false)
+  driveUrl          String?
+  driveUploadedAt   DateTime?
+  driveUploadedById String?
+  driveUploadedBy   User?      @relation("TaskDriveUploader", fields: [driveUploadedById], references: [id])
+  driveNote         String?
+  referenceUrl      String?
+  notes             String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  comments          TaskComment[]
+  activities        TaskActivity[]
+  reviews           TaskReview[]
+  notifications     Notification[]
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model TaskActivity {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model TaskReview {
+  id         String       @id @default(cuid())
+  taskId     String
+  task       Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reviewerId String
+  reviewer   User         @relation(fields: [reviewerId], references: [id])
+  action     ReviewAction
+  notes      String?
+  createdAt  DateTime     @default(now())
+}
+
+model CalendarEvent {
+  id          String    @id @default(cuid())
+  title       String
+  type        EventType @default(OTHER)
+  date        DateTime
+  time        String?
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id])
+  clientId    String?
+  client      Client?   @relation(fields: [clientId], references: [id])
+  description String?
+  priority    Priority  @default(MEDIUM)
+  createdById String
+  createdAt   DateTime  @default(now())
+  assignees   CalendarEventAssignee[]
+}
+
+model CalendarEventAssignee {
+  id      String        @id @default(cuid())
+  eventId String
+  event   CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String?
+  read      Boolean          @default(false)
+  taskId    String?
+  task      Task?            @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  projectId String?
+  href      String?
+  createdAt DateTime         @default(now())
+}
