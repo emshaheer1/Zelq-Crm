@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
-import type { Client, Priority, Project, User } from "@prisma/client";
+import type { Client, Project, User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,12 +15,26 @@ import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createProject } from "@/server/actions/projects";
-import { createTask } from "@/server/actions/tasks";
-import { createCalendarEvent } from "@/server/actions/calendar";
-import { createEmployee } from "@/server/actions/employees";
 import { fieldSelectClass } from "@/lib/styles";
 import { AppSelect } from "@/components/ui/app-select";
+
+function field(form: FormData, key: string) {
+  const value = form.get(key);
+  return typeof value === "string" ? value : "";
+}
+
+async function postJson(url: string, body: unknown) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() => null);
+  const result = (response ? await response.json().catch(() => ({})) : {}) as { id?: string; error?: string };
+  if (!response?.ok || !result.id) {
+    throw new Error(result.error || "Could not save.");
+  }
+  return result;
+}
 
 function Field({
   label,
@@ -66,21 +80,21 @@ export function NewTaskDialog({
             const form = new FormData(event.currentTarget);
             startTransition(async () => {
               try {
-                const result = await createTask({
-                  title: form.get("title"),
-                  projectId: form.get("projectId"),
-                  assignedToId: form.get("assignedToId"),
-                  description: form.get("description"),
-                  priority: form.get("priority"),
-                  startDate: form.get("startDate"),
-                  deadline: form.get("deadline"),
-                  status: form.get("status"),
-                  referenceUrl: form.get("referenceUrl"),
-                  notes: form.get("notes"),
+                await postJson("/api/tasks", {
+                  title: field(form, "title"),
+                  projectId: field(form, "projectId"),
+                  assignedToId: field(form, "assignedToId"),
+                  description: field(form, "description"),
+                  priority: field(form, "priority"),
+                  startDate: field(form, "startDate"),
+                  deadline: field(form, "deadline"),
+                  status: field(form, "status"),
+                  referenceUrl: field(form, "referenceUrl"),
+                  notes: field(form, "notes"),
                 });
                 actionOk("Task created successfully.");
                 onOpenChange(false);
-                router.push(`/tasks/${result.id}`);
+                window.setTimeout(() => router.refresh(), 300);
               } catch (error) {
                 actionCatch(error);
               }
@@ -197,22 +211,22 @@ export function NewProjectDialog({
             const form = new FormData(event.currentTarget);
             startTransition(async () => {
               try {
-                const result = await createProject({
-                  name: form.get("name"),
-                  clientId: form.get("clientId"),
-                  description: form.get("description"),
-                  managerId: form.get("managerId"),
+                await postJson("/api/projects", {
+                  name: field(form, "name"),
+                  clientId: field(form, "clientId"),
+                  description: field(form, "description"),
+                  managerId: field(form, "managerId"),
                   memberIds,
-                  startDate: form.get("startDate"),
-                  deadline: form.get("deadline"),
-                  priority: form.get("priority"),
-                  status: form.get("status"),
-                  driveFolderUrl: form.get("driveFolderUrl"),
-                  notes: form.get("notes"),
+                  startDate: field(form, "startDate"),
+                  deadline: field(form, "deadline"),
+                  priority: field(form, "priority"),
+                  status: field(form, "status"),
+                  driveFolderUrl: field(form, "driveFolderUrl"),
+                  notes: field(form, "notes"),
                 });
                 actionOk("Project created successfully.");
                 onOpenChange(false);
-                router.push(`/projects/${result.id}`);
+                window.setTimeout(() => router.refresh(), 300);
               } catch (error) {
                 actionCatch(error);
               }
@@ -455,20 +469,20 @@ export function NewEventDialog({
             const form = new FormData(event.currentTarget);
             startTransition(async () => {
               try {
-                await createCalendarEvent({
-                  title: form.get("title"),
-                  type: form.get("type"),
-                  date: form.get("date"),
-                  time: form.get("time"),
-                  projectId: form.get("projectId") || undefined,
-                  clientId: form.get("clientId") || undefined,
+                await postJson("/api/calendar", {
+                  title: field(form, "title"),
+                  type: field(form, "type"),
+                  date: field(form, "date"),
+                  time: field(form, "time"),
+                  projectId: field(form, "projectId"),
+                  clientId: field(form, "clientId"),
                   assigneeIds,
-                  description: form.get("description"),
-                  priority: form.get("priority") as Priority,
+                  description: field(form, "description"),
+                  priority: field(form, "priority"),
                 });
                 actionOk("Event created successfully.");
                 onOpenChange(false);
-                router.push("/calendar");
+                window.setTimeout(() => router.refresh(), 300);
               } catch (error) {
                 actionCatch(error);
               }
@@ -582,19 +596,19 @@ export function NewEmployeeDialog({
             const form = new FormData(event.currentTarget);
             startTransition(async () => {
               try {
-                const result = await createEmployee({
-                  name: form.get("name"),
-                  email: form.get("email"),
-                  phone: form.get("phone"),
-                  role: form.get("role"),
-                  designation: form.get("designation"),
-                  joiningDate: form.get("joiningDate"),
+                await postJson("/api/employees", {
+                  name: field(form, "name"),
+                  email: field(form, "email"),
+                  phone: field(form, "phone"),
+                  role: field(form, "role"),
+                  designation: field(form, "designation"),
+                  joiningDate: field(form, "joiningDate"),
                   status: "ACTIVE",
-                  password: form.get("password"),
+                  password: field(form, "password"),
                 });
                 actionOk("Employee created successfully.");
                 onOpenChange(false);
-                router.push(`/employees/${result.id}`);
+                window.setTimeout(() => router.refresh(), 300);
               } catch (error) {
                 actionCatch(error);
               }

@@ -17,7 +17,9 @@ export function actionErr(message: string) {
 }
 
 export function actionCatch(error: unknown, fallback = "Something went wrong. Please try again.") {
-  actionErr(error instanceof Error && error.message ? error.message : fallback);
+  const message = error instanceof Error ? error.message : "";
+  if (/Minified React error|Server Components render|digest/i.test(message)) return;
+  actionErr(message || fallback);
 }
 
 export function ActionPopup() {
@@ -37,7 +39,7 @@ export function ActionPopup() {
   }, [notice]);
 
   return (
-    <Dialog open={Boolean(notice)} onOpenChange={(open) => { if (!open) setNotice(null); }}>
+    <Dialog open={Boolean(notice)}>
       <DialogContent className="z-[80] max-w-sm text-center sm:max-w-sm" showCloseButton={false}>
         <div className="login-check-pop login-motion flex flex-col items-center gap-3 py-4">
           {notice?.kind === "ok" ? (

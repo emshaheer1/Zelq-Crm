@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Building2, MoreHorizontal, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -47,7 +46,6 @@ export function ClientsWorkspace({
   clients: ClientRow[];
   openCreate: boolean;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState(clients);
 
@@ -133,7 +131,6 @@ export function ClientsWorkspace({
         onCreated={(client) => {
           setRows((current) => [client, ...current.filter((row) => row.id !== client.id)]);
           actionOk("Client created successfully");
-          router.refresh();
         }}
       />
     </div>

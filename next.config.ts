@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   experimental: {
     authInterrupts: true,
     staleTimes: {
-      dynamic: 30,
+      dynamic: 60,
       static: 180,
     },
   },
