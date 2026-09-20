@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { Role, User } from "@prisma/client";
 import { PageHeader } from "@/components/shared/page-header";
 import { NewEmployeeDialog } from "@/components/forms/entity-forms";
@@ -59,9 +59,9 @@ export function SettingsForm({
                     phone: form.get("phone"),
                     logoUrl: form.get("logoUrl"),
                   });
-                  toast.success("Company saved.");
+                  actionOk("Company saved successfully.");
                 } catch (error) {
-                  toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                  actionCatch(error);
                 }
               });
             }}
@@ -92,10 +92,10 @@ export function SettingsForm({
                   newPassword: form.get("newPassword"),
                   confirmPassword: form.get("confirmPassword"),
                 });
-                toast.success("Password updated.");
+                actionOk("Password updated successfully.");
                 event.currentTarget.reset();
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                actionCatch(error);
               }
             });
           }}
@@ -170,7 +170,7 @@ export function SettingsForm({
                           joiningDate: record.joiningDate?.toISOString().slice(0, 10),
                           status: record.status,
                         });
-                        toast.success("Role updated.");
+                        actionOk("Role updated successfully.");
                       })
                     }
                   >
@@ -185,7 +185,7 @@ export function SettingsForm({
                       onClick={() =>
                         startTransition(async () => {
                           await deactivateEmployee(record.id);
-                          toast.success("Employee deactivated.");
+                          actionOk("Employee deactivated successfully.");
                         })
                       }
                     >

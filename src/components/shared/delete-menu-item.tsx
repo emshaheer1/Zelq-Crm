@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
@@ -28,11 +28,11 @@ export function DeleteMenuItem({
         startTransition(async () => {
           try {
             await onDelete();
-            toast.success(`${label} deleted.`);
+            actionOk(`${label[0]!.toUpperCase()}${label.slice(1)} deleted successfully.`);
             if (redirectTo) router.push(redirectTo);
             else router.refresh();
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Could not delete.");
+            actionCatch(error, "Could not delete.");
           }
         });
       }}
@@ -64,11 +64,11 @@ export function DeleteButton({
         startTransition(async () => {
           try {
             await onDelete();
-            toast.success(`${label} deleted.`);
+            actionOk(`${label[0]!.toUpperCase()}${label.slice(1)} deleted successfully.`);
             if (redirectTo) router.push(redirectTo);
             else router.refresh();
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Could not delete.");
+            actionCatch(error, "Could not delete.");
           }
         });
       }}

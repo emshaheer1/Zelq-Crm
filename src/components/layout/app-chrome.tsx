@@ -5,6 +5,7 @@ import type { Role } from "@prisma/client";
 import { Sidebar } from "@/components/layout/sidebar";
 import { TopBar } from "@/components/layout/top-bar";
 import { getNotifications } from "@/server/actions/notifications";
+import { ActionPopup } from "@/components/shared/action-popup";
 
 type ShellUser = {
   id: string;
@@ -50,6 +51,7 @@ export function AppChrome({ user, children }: { user: ShellUser; children: React
           {children}
         </main>
       </div>
+      <ActionPopup />
     </div>
   );
 }

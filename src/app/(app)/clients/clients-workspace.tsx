@@ -13,12 +13,8 @@ import { deleteClient } from "@/server/actions/clients";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/shared/surface";
 import { ClientAvatar } from "@/components/shared/user-avatar";
+import { actionOk } from "@/components/shared/action-popup";
 import { formatDate } from "@/lib/dates";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -53,7 +49,6 @@ export function ClientsWorkspace({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [rows, setRows] = useState(clients);
 
   useEffect(() => {
@@ -63,12 +58,6 @@ export function ClientsWorkspace({
   useEffect(() => {
     setRows(clients);
   }, [clients]);
-
-  useEffect(() => {
-    if (!success) return;
-    const timer = setTimeout(() => setSuccess(false), 1600);
-    return () => clearTimeout(timer);
-  }, [success]);
 
   return (
     <div className="space-y-6">
@@ -143,31 +132,10 @@ export function ClientsWorkspace({
         onOpenChange={setOpen}
         onCreated={(client) => {
           setRows((current) => [client, ...current.filter((row) => row.id !== client.id)]);
-          setSuccess(true);
+          actionOk("Client created successfully");
           router.refresh();
         }}
       />
-      <Dialog open={success} onOpenChange={setSuccess}>
-        <DialogContent className="max-w-sm text-center sm:max-w-sm" showCloseButton={false}>
-          <div className="login-check-pop login-motion flex flex-col items-center gap-3 py-4">
-            <span className="grid size-14 place-items-center rounded-full bg-[#22c55e]">
-              <svg viewBox="0 0 24 24" className="size-8" fill="none" aria-hidden>
-                <path
-                  className="login-check-draw login-motion"
-                  d="M6 12.5L10.2 16.5L18 8"
-                  stroke="white"
-                  strokeWidth="2.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-            <DialogTitle className="text-base font-semibold text-[#111827]">
-              Client created successfully
-            </DialogTitle>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { Client, Priority, Project, User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,11 +78,11 @@ export function NewTaskDialog({
                   referenceUrl: form.get("referenceUrl"),
                   notes: form.get("notes"),
                 });
-                toast.success("Task created successfully.");
+                actionOk("Task created successfully.");
                 onOpenChange(false);
                 router.push(`/tasks/${result.id}`);
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                actionCatch(error);
               }
             });
           }}
@@ -210,11 +210,11 @@ export function NewProjectDialog({
                   driveFolderUrl: form.get("driveFolderUrl"),
                   notes: form.get("notes"),
                 });
-                toast.success("Project saved.");
+                actionOk("Project created successfully.");
                 onOpenChange(false);
                 router.push(`/projects/${result.id}`);
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                actionCatch(error);
               }
             });
           }}
@@ -466,11 +466,11 @@ export function NewEventDialog({
                   description: form.get("description"),
                   priority: form.get("priority") as Priority,
                 });
-                toast.success("Event created.");
+                actionOk("Event created successfully.");
                 onOpenChange(false);
                 router.push("/calendar");
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                actionCatch(error);
               }
             });
           }}
@@ -592,11 +592,11 @@ export function NewEmployeeDialog({
                   status: "ACTIVE",
                   password: form.get("password"),
                 });
-                toast.success("Employee created.");
+                actionOk("Employee created successfully.");
                 onOpenChange(false);
                 router.push(`/employees/${result.id}`);
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                actionCatch(error);
               }
             });
           }}

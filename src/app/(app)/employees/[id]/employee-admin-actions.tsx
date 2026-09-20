@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { toast } from "sonner";
+import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,10 +45,10 @@ export function EmployeeAdminActions({ employee }: { employee: User }) {
                   startTransition(async () => {
                     try {
                       await deactivateEmployee(employee.id);
-                      toast.success("Employee deactivated.");
+                      actionOk("Employee deactivated successfully.");
                       router.refresh();
                     } catch (error) {
-                      toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                      actionCatch(error);
                     }
                   })
                 }
@@ -64,7 +64,7 @@ export function EmployeeAdminActions({ employee }: { employee: User }) {
           onClick={() =>
             startTransition(async () => {
               await activateEmployee(employee.id);
-              toast.success("Employee activated.");
+              actionOk("Employee activated successfully.");
               router.refresh();
             })
           }

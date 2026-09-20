@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { toast } from "sonner";
+import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { Prisma } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,10 +42,10 @@ export function ProjectActions({
             startTransition(async () => {
               try {
                 await updateProjectNotes(project.id, notes);
-                toast.success("Project saved.");
+                actionOk("Project saved successfully.");
                 router.refresh();
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                actionCatch(error);
               }
             })
           }
@@ -72,10 +72,10 @@ export function ProjectActions({
                   startTransition(async () => {
                     try {
                       await archiveProject(project.id);
-                      toast.success("Project archived.");
+                      actionOk("Project archived successfully.");
                       router.refresh();
                     } catch (error) {
-                      toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+                      actionCatch(error);
                     }
                   })
                 }

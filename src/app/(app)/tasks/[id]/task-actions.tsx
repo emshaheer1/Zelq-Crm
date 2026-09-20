@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { Prisma } from "@prisma/client";
 import { Eye, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,10 +56,10 @@ export function TaskActions({
     startTransition(async () => {
       try {
         await fn();
-        toast.success(success);
+        actionOk(success);
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+        actionCatch(error);
       }
     });
   };

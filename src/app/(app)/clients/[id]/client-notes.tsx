@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { Client } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,10 +33,10 @@ export function ClientNotes({ client }: { client: Client }) {
                 status: client.status,
                 notes,
               });
-              toast.success("Client saved.");
+              actionOk("Client saved successfully.");
               router.refresh();
             } catch (error) {
-              toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+              actionCatch(error);
             }
           })
         }
