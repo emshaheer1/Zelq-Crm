@@ -19,7 +19,7 @@ export default async function ProjectsPage({
         client: true,
         manager: true,
         members: { include: { user: true } },
-        tasks: true,
+        tasks: { select: { status: true } },
       },
       orderBy: { updatedAt: "desc" },
     }),

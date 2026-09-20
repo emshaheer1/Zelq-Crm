@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { Building2, MoreHorizontal, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -12,7 +13,13 @@ import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
 import { deleteClient } from "@/server/actions/clients";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/shared/surface";
+import { ClientAvatar } from "@/components/shared/user-avatar";
 import { formatDate } from "@/lib/dates";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -28,17 +35,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+type ClientRow = Prisma.ClientGetPayload<{
+  include: { _count: { select: { projects: true } } };
+}>;
+
 export function ClientsWorkspace({
   clients,
   openCreate,
 }: {
-  clients: Prisma.ClientGetPayload<{ include: { projects: true } }>[];
+  clients: ClientRow[];
   openCreate: boolean;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [rows, setRows] = useState(clients);
+
   useEffect(() => {
     if (openCreate) setOpen(true);
   }, [openCreate]);
+
+  useEffect(() => {
+    setRows(clients);
+  }, [clients]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(false), 1600);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   return (
     <div className="space-y-6">
@@ -52,7 +77,7 @@ export function ClientsWorkspace({
           </Button>
         }
       />
-      {clients.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState title="No clients yet." description="Add a client record to attach projects." icon={Building2} />
       ) : (
         <Surface padded={false}>
@@ -68,13 +93,11 @@ export function ClientsWorkspace({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clients.map((client) => (
+              {rows.map((client) => (
                 <TableRow key={client.id} className="h-16">
                   <TableCell>
                     <Link href={`/clients/${client.id}`} className="flex items-center gap-3">
-                      <span className="flex size-9 items-center justify-center rounded-lg bg-[#F2F4F7] text-[#111827]">
-                        <Building2 className="size-4" />
-                      </span>
+                      <ClientAvatar name={client.name} src={client.logoUrl} />
                       <span>
                         <span className="block text-sm font-medium text-[#111827]">{client.name}</span>
                         <span className="block text-xs text-[#667085]">{client.email || "No email"}</span>
@@ -82,7 +105,7 @@ export function ClientsWorkspace({
                     </Link>
                   </TableCell>
                   <TableCell className="text-[#667085]">{client.companyName || "—"}</TableCell>
-                  <TableCell className="text-[#667085]">{client.projects.length}</TableCell>
+                  <TableCell className="text-[#667085]">{client._count.projects}</TableCell>
                   <TableCell><StatusBadge value={client.status} /></TableCell>
                   <TableCell className="text-[#667085]">{formatDate(client.updatedAt)}</TableCell>
                   <TableCell>
@@ -94,7 +117,13 @@ export function ClientsWorkspace({
                         <DropdownMenuItem asChild>
                           <Link href={`/clients/${client.id}`}>View client</Link>
                         </DropdownMenuItem>
-                        <DeleteMenuItem label="client" onDelete={() => deleteClient(client.id)} />
+                        <DeleteMenuItem
+                          label="client"
+                          onDelete={async () => {
+                            await deleteClient(client.id);
+                            setRows((current) => current.filter((row) => row.id !== client.id));
+                          }}
+                        />
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -104,7 +133,36 @@ export function ClientsWorkspace({
           </Table>
         </Surface>
       )}
-      <NewClientDialog open={open} onOpenChange={setOpen} />
+      <NewClientDialog
+        open={open}
+        onOpenChange={setOpen}
+        onCreated={(client) => {
+          setRows((current) => [client as ClientRow, ...current.filter((row) => row.id !== client.id)]);
+          setSuccess(true);
+          router.refresh();
+        }}
+      />
+      <Dialog open={success} onOpenChange={setSuccess}>
+        <DialogContent className="max-w-sm text-center sm:max-w-sm" showCloseButton={false}>
+          <div className="login-check-pop login-motion flex flex-col items-center gap-3 py-4">
+            <span className="grid size-14 place-items-center rounded-full bg-[#22c55e]">
+              <svg viewBox="0 0 24 24" className="size-8" fill="none" aria-hidden>
+                <path
+                  className="login-check-draw login-motion"
+                  d="M6 12.5L10.2 16.5L18 8"
+                  stroke="white"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <DialogTitle className="text-base font-semibold text-[#111827]">
+              Client created successfully
+            </DialogTitle>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

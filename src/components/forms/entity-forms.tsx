@@ -21,6 +21,43 @@ import { createCalendarEvent } from "@/server/actions/calendar";
 import { createEmployee } from "@/server/actions/employees";
 import { fieldSelectClass } from "@/lib/styles";
 import { AppSelect } from "@/components/ui/app-select";
+import { ClientAvatar } from "@/components/shared/user-avatar";
+
+function compressLogo(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Choose an image file."));
+      return;
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 256;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error("Could not read image."));
+        return;
+      }
+      const scale = Math.max(size / img.width, size / img.height);
+      const width = img.width * scale;
+      const height = img.height * scale;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, (size - width) / 2, (size - height) / 2, width, height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read image."));
+    };
+    img.src = url;
+  });
+}
 
 function Field({
   label,
@@ -308,16 +345,35 @@ export function NewProjectDialog({
 export function NewClientDialog({
   open,
   onOpenChange,
+  onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreated: (client: {
+    id: string;
+    name: string;
+    companyName: string | null;
+    email: string | null;
+    status: "ACTIVE" | "INACTIVE";
+    logoUrl: string | null;
+    updatedAt: string;
+    _count: { projects: number };
+  }) => void;
 }) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+
+  function close(next: boolean) {
+    if (!next) {
+      setFormError("");
+      setLogoUrl("");
+    }
+    onOpenChange(next);
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={close}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New Client</DialogTitle>
@@ -340,24 +396,66 @@ export function NewClientDialog({
                 country: String(form.get("country") ?? ""),
                 status: String(form.get("status") ?? "ACTIVE"),
                 notes: String(form.get("notes") ?? ""),
+                logoUrl: logoUrl || undefined,
               }),
             }).catch(() => null);
             setPending(false);
-            const result = response ? ((await response.json().catch(() => ({}))) as { id?: string; error?: string }) : {};
+            const result = response
+              ? ((await response.json().catch(() => ({}))) as {
+                  id?: string;
+                  error?: string;
+                  name?: string;
+                  companyName?: string | null;
+                  email?: string | null;
+                  status?: "ACTIVE" | "INACTIVE";
+                  logoUrl?: string | null;
+                  updatedAt?: string;
+                })
+              : {};
             if (!response?.ok || !result.id) {
               const message = result.error || "Could not save client.";
               setFormError(message);
-              toast.error(message);
               return;
             }
-            toast.success("Client created.");
-            onOpenChange(false);
-            router.push(`/clients/${result.id}`);
+            close(false);
+            onCreated({
+              id: result.id,
+              name: result.name || String(form.get("name") ?? ""),
+              companyName: result.companyName ?? null,
+              email: result.email ?? null,
+              status: result.status || "ACTIVE",
+              logoUrl: result.logoUrl ?? logoUrl || null,
+              updatedAt: result.updatedAt || new Date().toISOString(),
+              _count: { projects: 0 },
+            });
           }}
         >
           {formError ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>
           ) : null}
+          <Field label="Company logo">
+            <div className="flex items-center gap-3">
+              <ClientAvatar name="" src={logoUrl || null} className="size-12" />
+              <label className="cursor-pointer text-sm font-medium text-[#111827] underline-offset-2 hover:underline">
+                Upload logo
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    try {
+                      setLogoUrl(await compressLogo(file));
+                    } catch (error) {
+                      setFormError(error instanceof Error ? error.message : "Could not read image.");
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </Field>
           <Field label="Client Name">
             <Input name="name" required />
           </Field>

@@ -31,7 +31,7 @@ type ProjectItem = Prisma.ProjectGetPayload<{
     client: true;
     manager: true;
     members: { include: { user: true } };
-    tasks: true;
+    tasks: { select: { status: true } };
   };
 }> & { progress: number };
 

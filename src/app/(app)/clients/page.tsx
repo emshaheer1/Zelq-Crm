@@ -10,7 +10,7 @@ export default async function ClientsPage({
   await requireStaff();
   const params = await searchParams;
   const clients = await prisma.client.findMany({
-    include: { projects: true },
+    include: { _count: { select: { projects: true } } },
     orderBy: { name: "asc" },
   }).catch((error) => {
     console.error("clients.page", error);

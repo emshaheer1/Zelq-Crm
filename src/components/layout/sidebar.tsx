@@ -105,6 +105,7 @@ function NavLink({
   return (
     <Link
       href={href}
+      prefetch
       className={cn(
         "relative flex h-9 items-center gap-3 rounded-lg px-3 text-xs font-medium transition-colors duration-150",
         active ? "bg-sidebar-accent text-white" : "text-white/60 hover:bg-white/5 hover:text-white",

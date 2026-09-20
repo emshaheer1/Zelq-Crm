@@ -125,6 +125,7 @@ model Client {
   country     String?
   status      ClientStatus @default(ACTIVE)
   notes       String?
+  logoUrl     String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @default(now()) @updatedAt
   projects    Project[]

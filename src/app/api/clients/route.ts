@@ -37,9 +37,13 @@ export async function POST(request: Request) {
         country: data.country || null,
         status: data.status,
         notes: data.notes || null,
+        logoUrl: data.logoUrl || null,
       },
     });
-    return NextResponse.json({ id: client.id });
+    return NextResponse.json({
+      ...client,
+      _count: { projects: 0 },
+    });
   } catch (error) {
     console.error("POST /api/clients", error);
     const message = error instanceof Error ? error.message.slice(0, 280) : "Could not save client.";
