@@ -97,7 +97,7 @@ export function ClientsWorkspace({
                 <TableRow key={client.id} className="h-16">
                   <TableCell>
                     <Link href={`/clients/${client.id}`} className="flex items-center gap-3">
-                      <ClientAvatar name={client.name} src={client.logoUrl} />
+                      <ClientAvatar name={client.name} id={client.id} />
                       <span>
                         <span className="block text-sm font-medium text-[#111827]">{client.name}</span>
                         <span className="block text-xs text-[#667085]">{client.email || "No email"}</span>

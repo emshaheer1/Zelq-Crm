@@ -37,7 +37,6 @@ export async function POST(request: Request) {
         country: data.country || null,
         status: data.status,
         notes: data.notes || null,
-        logoUrl: data.logoUrl || null,
       },
     });
     return NextResponse.json({

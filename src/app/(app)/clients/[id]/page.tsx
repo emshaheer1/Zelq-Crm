@@ -27,7 +27,7 @@ export default async function ClientDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <ClientAvatar name={client.name} src={client.logoUrl} className="size-14" />
+        <ClientAvatar name={client.name} id={client.id} className="size-14" />
         <div className="min-w-0 flex-1">
           <PageHeader
             title={client.name}

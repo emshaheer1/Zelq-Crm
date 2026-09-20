@@ -13,7 +13,6 @@ export const clientSchema = z.object({
   country: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).nullish().transform((value) => value ?? "ACTIVE"),
   notes: z.string().optional(),
-  logoUrl: z.string().max(500_000).optional(),
 });
 
 export const employeeSchema = z.object({
