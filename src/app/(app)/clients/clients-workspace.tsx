@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Prisma } from "@prisma/client";
 import { Building2, MoreHorizontal, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -35,9 +34,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type ClientRow = Prisma.ClientGetPayload<{
-  include: { _count: { select: { projects: true } } };
-}>;
+type ClientRow = {
+  id: string;
+  name: string;
+  companyName: string | null;
+  email: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  updatedAt: Date | string;
+  _count: { projects: number };
+};
 
 export function ClientsWorkspace({
   clients,
@@ -137,7 +142,7 @@ export function ClientsWorkspace({
         open={open}
         onOpenChange={setOpen}
         onCreated={(client) => {
-          setRows((current) => [client as ClientRow, ...current.filter((row) => row.id !== client.id)]);
+          setRows((current) => [client, ...current.filter((row) => row.id !== client.id)]);
           setSuccess(true);
           router.refresh();
         }}

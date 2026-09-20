@@ -66,7 +66,7 @@ export function TopBar({
     body: string | null;
     href: string | null;
     read: boolean;
-    createdAt?: Date;
+    createdAt?: Date | string;
   }[];
 }) {
   const pathname = usePathname();
