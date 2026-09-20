@@ -424,7 +424,7 @@ export function NewClientDialog({
               companyName: result.companyName ?? null,
               email: result.email ?? null,
               status: result.status || "ACTIVE",
-              logoUrl: result.logoUrl ?? logoUrl || null,
+              logoUrl: result.logoUrl ?? (logoUrl || null),
               updatedAt: result.updatedAt || new Date().toISOString(),
               _count: { projects: 0 },
             });
