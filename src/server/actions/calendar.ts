@@ -65,4 +65,5 @@ export async function deleteCalendarEvent(id: string) {
   assertStaff(user);
   await prisma.calendarEvent.delete({ where: { id } });
   revalidatePath("/calendar");
+  revalidatePath("/dashboard");
 }

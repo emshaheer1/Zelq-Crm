@@ -18,6 +18,8 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { NewEventDialog } from "@/components/forms/entity-forms";
+import { DeleteButton } from "@/components/shared/delete-menu-item";
+import { deleteCalendarEvent } from "@/server/actions/calendar";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/shared/surface";
 import { eventTypeLabel } from "@/lib/labels";
@@ -186,6 +188,17 @@ export function CalendarWorkspace({
             </button>
           ) : null}
           {selected.description ? <p className="mt-3 text-sm text-[#344054]">{selected.description}</p> : null}
+          {canCreate ? (
+            <div className="mt-4">
+              <DeleteButton
+                label="event"
+                onDelete={async () => {
+                  await deleteCalendarEvent(selected.id);
+                  setSelected(null);
+                }}
+              />
+            </div>
+          ) : null}
         </Surface>
       ) : null}
 

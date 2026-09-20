@@ -36,6 +36,8 @@ import { fieldSelectClass } from "@/lib/styles";
 import { AppSelect } from "@/components/ui/app-select";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Surface } from "@/components/shared/surface";
+import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
+import { deleteTask } from "@/server/actions/tasks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -231,6 +233,9 @@ export function TasksWorkspace({
                         <DropdownMenuItem asChild>
                           <Link href={`/tasks/${task.id}`}>Edit</Link>
                         </DropdownMenuItem>
+                        {canCreate ? (
+                          <DeleteMenuItem label="task" onDelete={() => deleteTask(task.id)} />
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

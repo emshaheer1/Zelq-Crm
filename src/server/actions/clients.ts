@@ -59,3 +59,13 @@ export async function updateClient(id: string, input: unknown) {
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
 }
+
+export async function deleteClient(id: string) {
+  const user = await requireUser();
+  assertStaff(user);
+  await prisma.project.deleteMany({ where: { clientId: id } });
+  await prisma.client.delete({ where: { id } });
+  revalidatePath("/clients");
+  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+}

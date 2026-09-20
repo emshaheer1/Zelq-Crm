@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { NewClientDialog } from "@/components/forms/entity-forms";
+import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
+import { deleteClient } from "@/server/actions/clients";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/shared/surface";
 import { formatDate } from "@/lib/dates";
@@ -89,6 +91,7 @@ export function ClientsWorkspace({
                         <DropdownMenuItem asChild>
                           <Link href={`/clients/${client.id}`}>View client</Link>
                         </DropdownMenuItem>
+                        <DeleteMenuItem label="client" onDelete={() => deleteClient(client.id)} />
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

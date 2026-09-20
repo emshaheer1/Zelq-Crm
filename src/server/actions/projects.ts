@@ -87,6 +87,16 @@ export async function archiveProject(id: string) {
   revalidateProjects(id);
 }
 
+export async function deleteProject(id: string) {
+  const user = await requireUser();
+  assertStaff(user);
+  await prisma.project.delete({ where: { id } });
+  revalidatePath("/projects");
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+}
+
 export async function updateProjectNotes(id: string, notes: string) {
   const user = await requireUser();
   assertStaff(user);

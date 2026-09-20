@@ -17,7 +17,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { archiveProject, updateProjectNotes } from "@/server/actions/projects";
+import { archiveProject, deleteProject, updateProjectNotes } from "@/server/actions/projects";
+import { DeleteButton } from "@/components/shared/delete-menu-item";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -84,6 +85,11 @@ export function ProjectActions({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <DeleteButton
+          label="project"
+          onDelete={() => deleteProject(project.id)}
+          redirectTo="/projects"
+        />
       </div>
     </Surface>
   );

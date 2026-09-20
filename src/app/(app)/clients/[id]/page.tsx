@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Surface, SectionTitle } from "@/components/shared/surface";
 import { ClientNotes } from "./client-notes";
+import { ClientDeleteButton } from "./client-delete-button";
 
 export default async function ClientDetailPage({
   params,
@@ -24,7 +25,11 @@ export default async function ClientDetailPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title={client.name} description={client.companyName || "Client record"} />
+      <PageHeader
+        title={client.name}
+        description={client.companyName || "Client record"}
+        actions={<ClientDeleteButton id={client.id} />}
+      />
       <Surface>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Meta label="Email">{client.email || "—"}</Meta>

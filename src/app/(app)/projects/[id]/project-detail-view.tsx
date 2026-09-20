@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { ProjectActions } from "./project-actions";
+import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
+import { deleteProject } from "@/server/actions/projects";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,6 +75,13 @@ export function ProjectDetailView({
               <DropdownMenuItem asChild>
                 <Link href={`/tasks?new=1`}>Add task</Link>
               </DropdownMenuItem>
+              {canManage ? (
+                <DeleteMenuItem
+                  label="project"
+                  onDelete={() => deleteProject(project.id)}
+                  redirectTo="/projects"
+                />
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -108,6 +108,7 @@ export async function deleteTask(id: string) {
   await prisma.task.delete({ where: { id } });
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
+  revalidatePath("/calendar");
 }
 
 export async function startTask(id: string) {

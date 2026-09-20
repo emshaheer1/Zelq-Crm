@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PriorityBadge, StatusBadge } from "@/components/shared/status-badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { NewProjectDialog } from "@/components/forms/entity-forms";
+import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
+import { deleteProject } from "@/server/actions/projects";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -140,6 +142,9 @@ export function ProjectsWorkspace({
                       <DropdownMenuItem asChild>
                         <Link href={`/projects/${project.id}`}>Open project</Link>
                       </DropdownMenuItem>
+                      {canCreate ? (
+                        <DeleteMenuItem label="project" onDelete={() => deleteProject(project.id)} />
+                      ) : null}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
