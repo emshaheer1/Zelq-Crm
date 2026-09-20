@@ -28,6 +28,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { apiJson } from "@/lib/client-api";
+import { useCreateDialogs } from "@/components/forms/create-dialogs";
 import { logoutAction } from "@/server/actions/auth";
 import { formatDateTime } from "@/lib/dates";
 import { roleLabel } from "@/lib/labels";
@@ -78,6 +79,7 @@ export function TopBar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { open: openCreate, prefetch } = useCreateDialogs();
   const page =
     Object.entries(titles).find(([href]) => pathname === href || pathname.startsWith(`${href}/`))?.[1] ??
     { title: "ZelQ CRM", description: "Internal work management." };
@@ -156,7 +158,7 @@ export function TopBar({
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="h-9 px-3">
+              <Button className="h-9 px-3" onPointerEnter={prefetch} onFocus={prefetch}>
                 <Plus className="size-3.5" />
                 <span className="hidden sm:inline">New</span>
               </Button>
@@ -164,16 +166,16 @@ export function TopBar({
             <DropdownMenuContent align="end" className="w-52">
               {staff ? (
                 <>
-                  <DropdownMenuItem onClick={() => router.push("/tasks?new=1")}>
+                  <DropdownMenuItem onClick={() => openCreate("task")}>
                     <CheckSquare className="size-4" /> New Task
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/projects?new=1")}>
+                  <DropdownMenuItem onClick={() => openCreate("project")}>
                     <FolderKanban className="size-4" /> New Project
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/clients?new=1")}>
+                  <DropdownMenuItem onClick={() => openCreate("client")}>
                     <UserRound className="size-4" /> New Client
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/calendar?new=1")}>
+                  <DropdownMenuItem onClick={() => openCreate("event")}>
                     <CalendarDays className="size-4" /> New Calendar Event
                   </DropdownMenuItem>
                 </>

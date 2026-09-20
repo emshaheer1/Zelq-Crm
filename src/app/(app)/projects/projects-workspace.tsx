@@ -3,15 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Priority, ProjectStatus, TaskStatus } from "@prisma/client";
-import { CalendarDays, MoreHorizontal, Plus, Search, UsersRound } from "lucide-react";
+import { CalendarDays, MoreHorizontal, Search, UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PriorityBadge, StatusBadge } from "@/components/shared/status-badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { NewProjectDialog } from "@/components/forms/entity-forms";
+import { CreateButton } from "@/components/forms/create-dialogs";
 import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
 import { apiJson } from "@/lib/client-api";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Surface } from "@/components/shared/surface";
@@ -59,7 +58,6 @@ export function ProjectsWorkspace({
   canCreate: boolean;
   openCreate: boolean;
 }) {
-  const [open, setOpen] = useState(openCreate);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [client, setClient] = useState("");
@@ -83,12 +81,7 @@ export function ProjectsWorkspace({
         title="Projects"
         description="Organize employee work by client and deadline."
         actions={
-          canCreate ? (
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="size-4" />
-              New Project
-            </Button>
-          ) : null
+          canCreate ? <CreateButton kind="project">New Project</CreateButton> : null
         }
       />
 
@@ -194,13 +187,6 @@ export function ProjectsWorkspace({
           ))}
         </div>
       )}
-      <NewProjectDialog
-        open={open}
-        onOpenChange={setOpen}
-        clients={clients}
-        managers={managers}
-        employees={employees}
-      />
     </div>
   );
 }

@@ -20,7 +20,7 @@ import { TaskCard } from "@/components/tasks/task-card";
 import { WorkChart } from "@/components/dashboard/work-chart";
 import { Progress } from "@/components/ui/progress";
 import { PriorityBadge, StatusBadge } from "@/components/shared/status-badge";
-import { Button } from "@/components/ui/button";
+import { CreateButton } from "@/components/forms/create-dialogs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,13 +84,7 @@ export default async function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Overview of your team's workload and current projects."
-        actions={
-          <Button asChild>
-            <Link href="/tasks?new=1">
-              New Task
-            </Link>
-          </Button>
-        }
+        actions={<CreateButton kind="task">New Task</CreateButton>}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

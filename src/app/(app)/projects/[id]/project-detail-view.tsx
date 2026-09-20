@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { ProjectActions } from "./project-actions";
+import { useCreateDialogs } from "@/components/forms/create-dialogs";
 import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
 import { apiJson } from "@/lib/client-api";
 import {
@@ -44,6 +45,7 @@ export function ProjectDetailView({
   completed: number;
   canManage: boolean;
 }) {
+  const { open } = useCreateDialogs();
   const pending = project.tasks.filter((task) => task.status !== "COMPLETED").length;
 
   return (
@@ -72,9 +74,7 @@ export function ProjectDetailView({
               <MoreHorizontal className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={`/tasks?new=1`}>Add task</Link>
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => open("task")}>Add task</DropdownMenuItem>
               {canManage ? (
                 <DeleteMenuItem
                   label="project"

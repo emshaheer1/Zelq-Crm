@@ -11,15 +11,13 @@ import {
   List,
   LoaderCircle,
   MoreHorizontal,
-  Plus,
   RotateCcw,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { DriveBadge, PriorityBadge, StatusBadge } from "@/components/shared/status-badge";
 import { TaskCard } from "@/components/tasks/task-card";
-import { NewTaskDialog } from "@/components/forms/entity-forms";
-import { Button } from "@/components/ui/button";
+import { CreateButton } from "@/components/forms/create-dialogs";
 import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import {
@@ -79,7 +77,6 @@ export function TasksWorkspace({
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [createOpen, setCreateOpen] = useState(openCreate);
 
   const filtered = useMemo(() => {
     return tasks.filter((task) => {
@@ -104,12 +101,7 @@ export function TasksWorkspace({
         title="Tasks"
         description="Manage and track your team's work."
         actions={
-          canCreate ? (
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4" />
-              New Task
-            </Button>
-          ) : null
+          canCreate ? <CreateButton kind="task">New Task</CreateButton> : null
         }
       />
 
@@ -276,12 +268,6 @@ export function TasksWorkspace({
         </div>
       )}
 
-      <NewTaskDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        projects={projects}
-        employees={employees}
-      />
     </div>
   );
 }

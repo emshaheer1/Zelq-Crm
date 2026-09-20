@@ -323,7 +323,7 @@ export function NewClientDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreated: (client: {
+  onCreated?: (client: {
     id: string;
     name: string;
     companyName: string | null;
@@ -385,15 +385,19 @@ export function NewClientDialog({
               return;
             }
             close(false);
-            onCreated({
-              id: result.id,
-              name: result.name || String(form.get("name") ?? ""),
-              companyName: result.companyName ?? null,
-              email: result.email ?? null,
-              status: result.status || "ACTIVE",
-              updatedAt: result.updatedAt || new Date().toISOString(),
-              _count: { projects: 0 },
-            });
+            if (onCreated) {
+              onCreated({
+                id: result.id,
+                name: result.name || String(form.get("name") ?? ""),
+                companyName: result.companyName ?? null,
+                email: result.email ?? null,
+                status: result.status || "ACTIVE",
+                updatedAt: result.updatedAt || new Date().toISOString(),
+                _count: { projects: 0 },
+              });
+            } else {
+              reloadList();
+            }
           }}
         >
           {formError ? (

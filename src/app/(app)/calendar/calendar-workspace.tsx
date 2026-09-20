@@ -14,10 +14,10 @@ import {
   startOfWeek,
 } from "date-fns";
 import type { Prisma } from "@prisma/client";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { NewEventDialog } from "@/components/forms/entity-forms";
+import { CreateButton } from "@/components/forms/create-dialogs";
 import { DeleteButton } from "@/components/shared/delete-menu-item";
 import { apiJson } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
@@ -36,11 +36,7 @@ export function CalendarWorkspace({
   tasks,
   projects,
   events,
-  clients,
-  employees,
-  projectOptions,
   canCreate,
-  openCreate,
 }: {
   tasks: TaskItem[];
   projects: ProjectItem[];
@@ -53,7 +49,6 @@ export function CalendarWorkspace({
 }) {
   const router = useRouter();
   const [cursor, setCursor] = useState(new Date());
-  const [open, setOpen] = useState(openCreate);
   const [selected, setSelected] = useState<EventItem | null>(null);
 
   const days = useMemo(() => {
@@ -125,12 +120,7 @@ export function CalendarWorkspace({
             <Button variant="outline" size="icon" onClick={() => setCursor((current) => addMonths(current, 1))} aria-label="Next month">
               <ChevronRight className="size-4" />
             </Button>
-            {canCreate ? (
-              <Button onClick={() => setOpen(true)}>
-                <Plus className="size-4" />
-                New Event
-              </Button>
-            ) : null}
+            {canCreate ? <CreateButton kind="event">New Event</CreateButton> : null}
           </div>
         }
       />
@@ -218,14 +208,6 @@ export function CalendarWorkspace({
       {events.length === 0 && tasks.length === 0 ? (
         <EmptyState title="No calendar items yet." description="Deadlines and meetings will appear on this calendar." />
       ) : null}
-
-      <NewEventDialog
-        open={open}
-        onOpenChange={setOpen}
-        projects={projectOptions}
-        clients={clients}
-        employees={employees}
-      />
     </div>
   );
 }

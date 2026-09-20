@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { Building2, MoreHorizontal, Plus } from "lucide-react";
+import { Building2, MoreHorizontal } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { NewClientDialog } from "@/components/forms/entity-forms";
+import { CreateButton } from "@/components/forms/create-dialogs";
 import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
 import { apiJson } from "@/lib/client-api";
-import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/shared/surface";
 import { ClientAvatar } from "@/components/shared/user-avatar";
-import { actionOk } from "@/components/shared/action-popup";
 import { formatDate } from "@/lib/dates";
 import {
   Table,
@@ -41,33 +39,18 @@ type ClientRow = {
 
 export function ClientsWorkspace({
   clients,
-  openCreate,
 }: {
   clients: ClientRow[];
   openCreate: boolean;
 }) {
-  const [open, setOpen] = useState(false);
   const [rows, setRows] = useState(clients);
-
-  useEffect(() => {
-    if (openCreate) setOpen(true);
-  }, [openCreate]);
-
-  useEffect(() => {
-    setRows(clients);
-  }, [clients]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Clients"
         description="Internal records only. Clients do not log in."
-        actions={
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="size-4" />
-            New Client
-          </Button>
-        }
+        actions={<CreateButton kind="client">New Client</CreateButton>}
       />
       {rows.length === 0 ? (
         <EmptyState title="No clients yet." description="Add a client record to attach projects." icon={Building2} />
@@ -125,14 +108,6 @@ export function ClientsWorkspace({
           </Table>
         </Surface>
       )}
-      <NewClientDialog
-        open={open}
-        onOpenChange={setOpen}
-        onCreated={(client) => {
-          setRows((current) => [client, ...current.filter((row) => row.id !== client.id)]);
-          actionOk("Client created successfully");
-        }}
-      />
     </div>
   );
 }
