@@ -71,6 +71,22 @@ export async function POST(
     }
 
     if (action === "submit") {
+      if (body.uploaded && body.url) {
+        requireDriveUrl(body.url);
+        await prisma.task.update({
+          where: { id },
+          data: {
+            driveUploaded: true,
+            driveUrl: body.url,
+            driveNote: body.note || null,
+            driveUploadedAt: new Date(),
+            driveUploadedById: user.id,
+            updatedAt: new Date(),
+          },
+        });
+        task.driveUploaded = true;
+        task.driveUrl = body.url;
+      }
       if (!task.driveUploaded || !task.driveUrl) {
         return jsonError("Upload the work to Google Drive and add the link first.");
       }

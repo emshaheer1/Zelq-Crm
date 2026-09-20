@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
+import { apiJson, reloadList } from "@/lib/client-api";
 import type { Client, Project, User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,15 +24,8 @@ function field(form: FormData, key: string) {
 }
 
 async function postJson(url: string, body: unknown) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }).catch(() => null);
-  const result = (response ? await response.json().catch(() => ({})) : {}) as { id?: string; error?: string };
-  if (!response?.ok || !result.id) {
-    throw new Error(result.error || "Could not save.");
-  }
+  const result = await apiJson<{ id?: string; error?: string }>(url, { method: "POST", json: body });
+  if (!result.id) throw new Error(result.error || "Could not save.");
   return result;
 }
 
@@ -64,8 +57,7 @@ export function NewTaskDialog({
   projects: Pick<Project, "id" | "name">[];
   employees: Pick<User, "id" | "name">[];
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,7 +70,8 @@ export function NewTaskDialog({
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
-            startTransition(async () => {
+            void (async () => {
+              setPending(true);
               try {
                 await postJson("/api/tasks", {
                   title: field(form, "title"),
@@ -94,11 +87,13 @@ export function NewTaskDialog({
                 });
                 actionOk("Task created successfully.");
                 onOpenChange(false);
-                window.setTimeout(() => router.refresh(), 1800);
+                reloadList();
               } catch (error) {
                 actionCatch(error);
+              } finally {
+                setPending(false);
               }
-            });
+            })();
           }}
         >
           <div>
@@ -194,8 +189,7 @@ export function NewProjectDialog({
   managers: Pick<User, "id" | "name">[];
   employees: Pick<User, "id" | "name">[];
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [memberIds, setMemberIds] = useState<string[]>([]);
 
   return (
@@ -209,7 +203,8 @@ export function NewProjectDialog({
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
-            startTransition(async () => {
+            void (async () => {
+              setPending(true);
               try {
                 await postJson("/api/projects", {
                   name: field(form, "name"),
@@ -226,11 +221,13 @@ export function NewProjectDialog({
                 });
                 actionOk("Project created successfully.");
                 onOpenChange(false);
-                window.setTimeout(() => router.refresh(), 1800);
+                reloadList();
               } catch (error) {
                 actionCatch(error);
+              } finally {
+                setPending(false);
               }
-            });
+            })();
           }}
         >
           <Field label="Project Name">
@@ -452,8 +449,7 @@ export function NewEventDialog({
   clients: Pick<Client, "id" | "name">[];
   employees: Pick<User, "id" | "name">[];
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
 
   return (
@@ -467,7 +463,8 @@ export function NewEventDialog({
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
-            startTransition(async () => {
+            void (async () => {
+              setPending(true);
               try {
                 await postJson("/api/calendar", {
                   title: field(form, "title"),
@@ -482,11 +479,13 @@ export function NewEventDialog({
                 });
                 actionOk("Event created successfully.");
                 onOpenChange(false);
-                window.setTimeout(() => router.refresh(), 1800);
+                reloadList();
               } catch (error) {
                 actionCatch(error);
+              } finally {
+                setPending(false);
               }
-            });
+            })();
           }}
         >
           <Field label="Event Title">
@@ -580,8 +579,7 @@ export function NewEmployeeDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -594,7 +592,8 @@ export function NewEmployeeDialog({
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
-            startTransition(async () => {
+            void (async () => {
+              setPending(true);
               try {
                 await postJson("/api/employees", {
                   name: field(form, "name"),
@@ -608,11 +607,13 @@ export function NewEmployeeDialog({
                 });
                 actionOk("Employee created successfully.");
                 onOpenChange(false);
-                window.setTimeout(() => router.refresh(), 1800);
+                reloadList();
               } catch (error) {
                 actionCatch(error);
+              } finally {
+                setPending(false);
               }
-            });
+            })();
           }}
         >
           <Field label="Name">

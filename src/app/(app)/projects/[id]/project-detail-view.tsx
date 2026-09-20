@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { ProjectActions } from "./project-actions";
 import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
-import { deleteProject } from "@/server/actions/projects";
+import { apiJson } from "@/lib/client-api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,7 +78,7 @@ export function ProjectDetailView({
               {canManage ? (
                 <DeleteMenuItem
                   label="project"
-                  onDelete={() => deleteProject(project.id)}
+                  onDelete={() => apiJson(`/api/projects/${project.id}`, { method: "DELETE" }).then(() => undefined)}
                   redirectTo="/projects"
                 />
               ) : null}

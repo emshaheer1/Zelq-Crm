@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -15,16 +15,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { activateEmployee, deactivateEmployee } from "@/server/actions/employees";
-import { useRouter } from "next/navigation";
+import { apiJson } from "@/lib/client-api";
 
 export function EmployeeAdminActions({ employee }: { employee: User }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState(employee.status);
 
   return (
     <div className="flex gap-2">
-      {employee.status === "ACTIVE" ? (
+      {status === "ACTIVE" ? (
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="outline" disabled={pending}>
@@ -41,17 +40,21 @@ export function EmployeeAdminActions({ employee }: { employee: User }) {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() =>
-                  startTransition(async () => {
-                    try {
-                      await deactivateEmployee(employee.id);
-                      actionOk("Employee deactivated successfully.");
-                      window.setTimeout(() => router.refresh(), 1800);
-                    } catch (error) {
-                      actionCatch(error);
-                    }
-                  })
-                }
+                onClick={async () => {
+                  setPending(true);
+                  try {
+                    await apiJson(`/api/employees/${employee.id}`, {
+                      method: "PATCH",
+                      json: { action: "deactivate" },
+                    });
+                    actionOk("Employee deactivated successfully.");
+                    setStatus("INACTIVE");
+                  } catch (error) {
+                    actionCatch(error);
+                  } finally {
+                    setPending(false);
+                  }
+                }}
               >
                 Deactivate
               </AlertDialogAction>
@@ -61,13 +64,21 @@ export function EmployeeAdminActions({ employee }: { employee: User }) {
       ) : (
         <Button
           disabled={pending}
-          onClick={() =>
-            startTransition(async () => {
-              await activateEmployee(employee.id);
+          onClick={async () => {
+            setPending(true);
+            try {
+              await apiJson(`/api/employees/${employee.id}`, {
+                method: "PATCH",
+                json: { action: "activate" },
+              });
               actionOk("Employee activated successfully.");
-              window.setTimeout(() => router.refresh(), 1800);
-            })
-          }
+              setStatus("ACTIVE");
+            } catch (error) {
+              actionCatch(error);
+            } finally {
+              setPending(false);
+            }
+          }}
         >
           Activate Employee
         </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
@@ -27,8 +27,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { globalSearch, type SearchResult } from "@/server/actions/search";
-import { markAllNotificationsRead, markNotificationRead } from "@/server/actions/notifications";
+import { apiJson } from "@/lib/client-api";
 import { logoutAction } from "@/server/actions/auth";
 import { formatDateTime } from "@/lib/dates";
 import { roleLabel } from "@/lib/labels";
@@ -44,6 +43,14 @@ const titles: Record<string, { title: string; description: string }> = {
   "/reports": { title: "Reports", description: "Monthly performance and completion." },
   "/notifications": { title: "Notifications", description: "Assignments, reviews, and deadlines." },
   "/settings": { title: "Settings", description: "Account and company preferences." },
+};
+
+type SearchResult = {
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  type: string;
 };
 
 export function TopBar({
@@ -76,7 +83,7 @@ export function TopBar({
     { title: "ZelQ CRM", description: "Internal work management." };
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const staff = user.role !== "EMPLOYEE";
 
   useEffect(() => {
@@ -85,9 +92,12 @@ export function TopBar({
       return;
     }
     const handle = setTimeout(() => {
-      startTransition(async () => {
-        setResults(await globalSearch(query));
-      });
+      setPending(true);
+      fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        .then((response) => (response.ok ? response.json() : []))
+        .then((data) => setResults(Array.isArray(data) ? data : []))
+        .catch(() => setResults([]))
+        .finally(() => setPending(false));
     }, 200);
     return () => clearTimeout(handle);
   }, [query]);
@@ -186,7 +196,7 @@ export function TopBar({
               <div className="flex items-center justify-between px-2 py-1.5">
                 <p className="text-xs font-semibold text-muted-foreground">Notifications</p>
                 {unread > 0 ? (
-                  <button className="text-xs font-medium text-foreground" onClick={() => markAllNotificationsRead()}>
+                  <button className="text-xs font-medium text-foreground" onClick={() => apiJson("/api/notifications", { method: "PATCH", json: { all: true } })}>
                     Mark all as read
                   </button>
                 ) : null}
@@ -199,7 +209,7 @@ export function TopBar({
                     key={item.id}
                     className="items-start gap-3 py-2.5"
                     onClick={async () => {
-                      await markNotificationRead(item.id);
+                      await apiJson("/api/notifications", { method: "PATCH", json: { id: item.id } }).catch(() => {});
                       if (item.href) router.push(item.href);
                     }}
                   >

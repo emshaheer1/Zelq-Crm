@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { Role, User } from "@prisma/client";
 import { PageHeader } from "@/components/shared/page-header";
@@ -11,8 +11,7 @@ import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Surface, SectionTitle } from "@/components/shared/surface";
-import { changePassword, updateCompany, updateNotificationPref } from "@/server/actions/settings";
-import { deactivateEmployee, updateEmployee } from "@/server/actions/employees";
+import { apiJson } from "@/lib/client-api";
 import { roleLabel } from "@/lib/labels";
 import { AppSelect } from "@/components/ui/app-select";
 import { Plus } from "lucide-react";
@@ -34,7 +33,7 @@ export function SettingsForm({
   };
   users: User[];
 }) {
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [open, setOpen] = useState(false);
   const isAdmin = user.role === "ADMIN";
 
@@ -50,20 +49,27 @@ export function SettingsForm({
             onSubmit={(event) => {
               event.preventDefault();
               const form = new FormData(event.currentTarget);
-              startTransition(async () => {
+              void (async () => {
+                setPending(true);
                 try {
-                  await updateCompany({
-                    name: form.get("name"),
-                    tagline: form.get("tagline"),
-                    email: form.get("email"),
-                    phone: form.get("phone"),
-                    logoUrl: form.get("logoUrl"),
+                  await apiJson("/api/settings", {
+                    method: "POST",
+                    json: {
+                      action: "company",
+                      name: form.get("name"),
+                      tagline: form.get("tagline"),
+                      email: form.get("email"),
+                      phone: form.get("phone"),
+                      logoUrl: form.get("logoUrl"),
+                    },
                   });
                   actionOk("Company saved successfully.");
                 } catch (error) {
                   actionCatch(error);
+                } finally {
+                  setPending(false);
                 }
-              });
+              })();
             }}
           >
             <Field label="Company name"><Input name="name" defaultValue={company.name} /></Field>
@@ -82,23 +88,31 @@ export function SettingsForm({
         <SectionTitle title="Password / Security" />
         <form
           className="grid max-w-md gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = new FormData(event.currentTarget);
-            startTransition(async () => {
-              try {
-                await changePassword({
-                  currentPassword: form.get("currentPassword"),
-                  newPassword: form.get("newPassword"),
-                  confirmPassword: form.get("confirmPassword"),
-                });
-                actionOk("Password updated successfully.");
-                event.currentTarget.reset();
-              } catch (error) {
-                actionCatch(error);
-              }
-            });
-          }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const data = new FormData(form);
+              void (async () => {
+                setPending(true);
+                try {
+                  await apiJson("/api/settings", {
+                    method: "POST",
+                    json: {
+                      action: "password",
+                      currentPassword: data.get("currentPassword"),
+                      newPassword: data.get("newPassword"),
+                      confirmPassword: data.get("confirmPassword"),
+                    },
+                  });
+                  actionOk("Password updated successfully.");
+                  form.reset();
+                } catch (error) {
+                  actionCatch(error);
+                } finally {
+                  setPending(false);
+                }
+              })();
+            }}
         >
           <Field label="Current password"><Input name="currentPassword" type="password" required /></Field>
           <Field label="New password"><Input name="newPassword" type="password" required minLength={8} /></Field>
@@ -113,7 +127,12 @@ export function SettingsForm({
           <input
             type="checkbox"
             defaultChecked
-            onChange={(event) => updateNotificationPref(event.target.checked)}
+            onChange={(event) => {
+              void apiJson("/api/settings", {
+                method: "POST",
+                json: { action: "notify", notifyInApp: event.target.checked },
+              }).catch(actionCatch);
+            }}
           />
           In-app notifications
         </label>
@@ -159,20 +178,37 @@ export function SettingsForm({
                     className="h-8"
                     defaultValue={record.role}
                     disabled={record.id === user.id}
-                    onChange={(event) =>
-                      startTransition(async () => {
-                        await updateEmployee(record.id, {
-                          name: record.name,
-                          email: record.email,
-                          phone: record.phone ?? "",
-                          role: event.target.value as Role,
-                          designation: record.designation ?? "",
-                          joiningDate: record.joiningDate?.toISOString().slice(0, 10),
-                          status: record.status,
-                        });
-                        actionOk("Role updated successfully.");
-                      })
-                    }
+                    onChange={(event) => {
+                      const raw = record.joiningDate as Date | string | null;
+                      const joining =
+                        typeof raw === "string"
+                          ? raw.slice(0, 10)
+                          : raw
+                            ? raw.toISOString().slice(0, 10)
+                            : "";
+                      void (async () => {
+                        setPending(true);
+                        try {
+                          await apiJson(`/api/employees/${record.id}`, {
+                            method: "PATCH",
+                            json: {
+                              name: record.name,
+                              email: record.email,
+                              phone: record.phone ?? "",
+                              role: event.target.value as Role,
+                              designation: record.designation ?? "",
+                              joiningDate: joining,
+                              status: record.status,
+                            },
+                          });
+                          actionOk("Role updated successfully.");
+                        } catch (error) {
+                          actionCatch(error);
+                        } finally {
+                          setPending(false);
+                        }
+                      })();
+                    }}
                   >
                     {Object.entries(roleLabel).map(([key, label]) => (
                       <option key={key} value={key}>{label}</option>
@@ -182,12 +218,22 @@ export function SettingsForm({
                     <button
                       type="button"
                       className="text-[12px] font-medium text-destructive hover:underline"
-                      onClick={() =>
-                        startTransition(async () => {
-                          await deactivateEmployee(record.id);
-                          actionOk("Employee deactivated successfully.");
-                        })
-                      }
+                      onClick={() => {
+                        void (async () => {
+                          setPending(true);
+                          try {
+                            await apiJson(`/api/employees/${record.id}`, {
+                              method: "PATCH",
+                              json: { action: "deactivate" },
+                            });
+                            actionOk("Employee deactivated successfully.");
+                          } catch (error) {
+                            actionCatch(error);
+                          } finally {
+                            setPending(false);
+                          }
+                        })();
+                      }}
                     >
                       Deactivate
                     </button>

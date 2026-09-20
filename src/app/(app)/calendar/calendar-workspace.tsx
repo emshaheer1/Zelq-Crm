@@ -19,11 +19,12 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { NewEventDialog } from "@/components/forms/entity-forms";
 import { DeleteButton } from "@/components/shared/delete-menu-item";
-import { deleteCalendarEvent } from "@/server/actions/calendar";
+import { apiJson } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/shared/surface";
 import { eventTypeLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { asDate } from "@/lib/dates";
 
 type TaskItem = Prisma.TaskGetPayload<{ include: { assignedTo: true; project: true } }>;
 type ProjectItem = Prisma.ProjectGetPayload<{ include: { client: true } }>;
@@ -63,21 +64,30 @@ export function CalendarWorkspace({
 
   const itemsForDay = (day: Date) => {
     const taskItems = tasks
-      .filter((task) => task.deadline && isSameDay(task.deadline, day))
-      .map((task) => ({
-        id: task.id,
-        label: task.title,
-        kind: "task" as const,
-        href: `/tasks/${task.id}`,
-        overdue: Boolean(
-          task.status !== "COMPLETED" &&
-            task.deadline &&
-            task.deadline < new Date() &&
-            !isSameDay(task.deadline, new Date()),
-        ),
-      }));
+      .filter((task) => {
+        const deadline = asDate(task.deadline);
+        return deadline && isSameDay(deadline, day);
+      })
+      .map((task) => {
+        const deadline = asDate(task.deadline);
+        return {
+          id: task.id,
+          label: task.title,
+          kind: "task" as const,
+          href: `/tasks/${task.id}`,
+          overdue: Boolean(
+            task.status !== "COMPLETED" &&
+              deadline &&
+              deadline < new Date() &&
+              !isSameDay(deadline, new Date()),
+          ),
+        };
+      });
     const projectItems = projects
-      .filter((project) => project.deadline && isSameDay(project.deadline, day))
+      .filter((project) => {
+        const deadline = asDate(project.deadline);
+        return deadline && isSameDay(deadline, day);
+      })
       .map((project) => ({
         id: project.id,
         label: project.name,
@@ -86,7 +96,10 @@ export function CalendarWorkspace({
         overdue: false,
       }));
     const eventItems = events
-      .filter((event) => isSameDay(event.date, day))
+      .filter((event) => {
+        const date = asDate(event.date);
+        return date && isSameDay(date, day);
+      })
       .map((event) => ({
         id: event.id,
         label: event.title,
@@ -179,7 +192,7 @@ export function CalendarWorkspace({
         <Surface>
           <h2 className="text-sm font-semibold text-[#111827]">{selected.title}</h2>
           <p className="mt-1 text-sm text-[#667085]">
-            {eventTypeLabel[selected.type]} · {format(selected.date, "MMM d, yyyy")}
+            {eventTypeLabel[selected.type]} · {asDate(selected.date) ? format(asDate(selected.date) as Date, "MMM d, yyyy") : "—"}
             {selected.time ? ` · ${selected.time}` : ""}
           </p>
           {selected.project ? (
@@ -193,7 +206,7 @@ export function CalendarWorkspace({
               <DeleteButton
                 label="event"
                 onDelete={async () => {
-                  await deleteCalendarEvent(selected.id);
+                  await apiJson(`/api/calendar/${selected.id}`, { method: "DELETE" });
                   setSelected(null);
                 }}
               />

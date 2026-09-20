@@ -1,18 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { Client } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Surface, SectionTitle } from "@/components/shared/surface";
-import { updateClient } from "@/server/actions/clients";
-import { useRouter } from "next/navigation";
+import { apiJson } from "@/lib/client-api";
 
 export function ClientNotes({ client }: { client: Client }) {
-  const router = useRouter();
   const [notes, setNotes] = useState(client.notes ?? "");
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
   return (
     <Surface>
@@ -21,25 +19,17 @@ export function ClientNotes({ client }: { client: Client }) {
       <Button
         className="mt-3"
         disabled={pending}
-        onClick={() =>
-          startTransition(async () => {
-            try {
-              await updateClient(client.id, {
-                name: client.name,
-                companyName: client.companyName ?? "",
-                email: client.email ?? "",
-                phone: client.phone ?? "",
-                country: client.country ?? "",
-                status: client.status,
-                notes,
-              });
-              actionOk("Client saved successfully.");
-              window.setTimeout(() => router.refresh(), 1800);
-            } catch (error) {
-              actionCatch(error);
-            }
-          })
-        }
+        onClick={async () => {
+          setPending(true);
+          try {
+            await apiJson(`/api/clients/${client.id}`, { method: "PATCH", json: { notes } });
+            actionOk("Client saved successfully.");
+          } catch (error) {
+            actionCatch(error);
+          } finally {
+            setPending(false);
+          }
+        }}
       >
         Save notes
       </Button>

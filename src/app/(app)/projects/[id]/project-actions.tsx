@@ -1,6 +1,5 @@
 "use client";
 
-import { useTransition } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import type { Prisma } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -17,9 +16,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { archiveProject, deleteProject, updateProjectNotes } from "@/server/actions/projects";
 import { DeleteButton } from "@/components/shared/delete-menu-item";
-import { useRouter } from "next/navigation";
+import { apiJson } from "@/lib/client-api";
 import { useState } from "react";
 
 export function ProjectActions({
@@ -27,9 +25,9 @@ export function ProjectActions({
 }: {
   project: Prisma.ProjectGetPayload<object>;
 }) {
-  const router = useRouter();
   const [notes, setNotes] = useState(project.notes ?? "");
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState(project.status);
 
   return (
     <Surface>
@@ -38,56 +36,65 @@ export function ProjectActions({
       <div className="mt-3 flex flex-wrap gap-2">
         <Button
           disabled={pending}
-          onClick={() =>
-            startTransition(async () => {
-              try {
-                await updateProjectNotes(project.id, notes);
-                actionOk("Project saved successfully.");
-                window.setTimeout(() => router.refresh(), 1800);
-              } catch (error) {
-                actionCatch(error);
-              }
-            })
-          }
+          onClick={async () => {
+            setPending(true);
+            try {
+              await apiJson(`/api/projects/${project.id}`, {
+                method: "PATCH",
+                json: { action: "notes", notes },
+              });
+              actionOk("Project saved successfully.");
+            } catch (error) {
+              actionCatch(error);
+            } finally {
+              setPending(false);
+            }
+          }}
         >
           Save notes
         </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" disabled={pending}>
-              Archive Project
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Archive Project?</AlertDialogTitle>
-              <AlertDialogDescription>
-                The project will be marked completed. Task history stays available.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() =>
-                  startTransition(async () => {
+        {status !== "COMPLETED" ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" disabled={pending}>
+                Archive Project
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Archive Project?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The project will be marked completed. Task history stays available.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    setPending(true);
                     try {
-                      await archiveProject(project.id);
+                      await apiJson(`/api/projects/${project.id}`, {
+                        method: "PATCH",
+                        json: { action: "archive" },
+                      });
                       actionOk("Project archived successfully.");
-                      window.setTimeout(() => router.refresh(), 1800);
+                      setStatus("COMPLETED");
                     } catch (error) {
                       actionCatch(error);
+                    } finally {
+                      setPending(false);
                     }
-                  })
-                }
-              >
-                Archive
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                  }}
+                >
+                  Archive
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : null}
         <DeleteButton
           label="project"
-          onDelete={() => deleteProject(project.id)}
+          onDelete={() => apiJson(`/api/projects/${project.id}`, { method: "DELETE" }).then(() => undefined)}
           redirectTo="/projects"
         />
       </div>

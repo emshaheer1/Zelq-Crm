@@ -10,7 +10,7 @@ import { PriorityBadge, StatusBadge } from "@/components/shared/status-badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { NewProjectDialog } from "@/components/forms/entity-forms";
 import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
-import { deleteProject } from "@/server/actions/projects";
+import { apiJson } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -152,7 +152,10 @@ export function ProjectsWorkspace({
                         <Link href={`/projects/${project.id}`}>Open project</Link>
                       </DropdownMenuItem>
                       {canCreate ? (
-                        <DeleteMenuItem label="project" onDelete={() => deleteProject(project.id)} />
+                        <DeleteMenuItem
+                          label="project"
+                          onDelete={() => apiJson(`/api/projects/${project.id}`, { method: "DELETE" }).then(() => undefined)}
+                        />
                       ) : null}
                     </DropdownMenuContent>
                   </DropdownMenu>

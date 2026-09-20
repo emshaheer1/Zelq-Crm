@@ -31,3 +31,26 @@ export async function GET() {
     return jsonError("Could not load notifications.", 500);
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const auth = await requireApiUser();
+    if ("error" in auth) return auth.error;
+    const body = ((await request.json()) ?? {}) as { id?: string; all?: boolean };
+    if (body.all) {
+      await prisma.notification.updateMany({
+        where: { userId: auth.user.id, read: false },
+        data: { read: true },
+      });
+    } else if (body.id) {
+      await prisma.notification.updateMany({
+        where: { id: body.id, userId: auth.user.id },
+        data: { read: true },
+      });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("PATCH /api/notifications", error);
+    return jsonError("Could not update notifications.", 500);
+  }
+}

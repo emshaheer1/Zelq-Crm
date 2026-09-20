@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { NewClientDialog } from "@/components/forms/entity-forms";
 import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
-import { deleteClient } from "@/server/actions/clients";
+import { apiJson } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/shared/surface";
 import { ClientAvatar } from "@/components/shared/user-avatar";
@@ -112,7 +112,7 @@ export function ClientsWorkspace({
                         <DeleteMenuItem
                           label="client"
                           onDelete={async () => {
-                            await deleteClient(client.id);
+                            await apiJson(`/api/clients/${client.id}`, { method: "DELETE" });
                             setRows((current) => current.filter((row) => row.id !== client.id));
                           }}
                         />

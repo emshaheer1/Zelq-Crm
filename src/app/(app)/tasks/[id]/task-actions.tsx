@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
+import { apiJson } from "@/lib/client-api";
 import { Eye, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,15 +31,6 @@ type Task = {
   assignedTo: { name: string; avatarUrl: string | null };
 };
 
-async function taskRequest(id: string, init: RequestInit) {
-  const response = await fetch(`/api/tasks/${id}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init.headers },
-  }).catch(() => null);
-  const result = (response ? await response.json().catch(() => ({})) : {}) as { error?: string };
-  if (!response?.ok) throw new Error(result.error || "Could not update task.");
-}
-
 export function TaskActions({
   task,
   canReview,
@@ -50,20 +42,23 @@ export function TaskActions({
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState(task.status);
   const [uploaded, setUploaded] = useState(task.driveUploaded);
   const [url, setUrl] = useState(task.driveUrl ?? "");
   const [note, setNote] = useState(task.driveNote ?? "");
   const [comment, setComment] = useState("");
   const [revision, setRevision] = useState("");
 
-  const run = async (body: object, success: string, after?: () => void) => {
+  const run = async (body: object, success: string, nextStatus?: string) => {
     if (pending) return;
     setPending(true);
     try {
-      await taskRequest(task.id, { method: "POST", body: JSON.stringify(body) });
+      await apiJson(`/api/tasks/${task.id}`, { method: "POST", json: body });
       actionOk(success);
-      after?.();
-      window.setTimeout(() => router.refresh(), 1800);
+      if (nextStatus) setStatus(nextStatus);
+      if (body && "action" in body && (body as { action?: string }).action === "comment") {
+        setComment("");
+      }
     } catch (error) {
       actionCatch(error);
     } finally {
@@ -85,9 +80,7 @@ export function TaskActions({
           <Button
             className="mt-3"
             disabled={pending}
-            onClick={() =>
-              run({ action: "comment", comment }, "Comment added.", () => setComment(""))
-            }
+            onClick={() => run({ action: "comment", comment }, "Comment added.")}
           >
             Send
           </Button>
@@ -98,7 +91,7 @@ export function TaskActions({
 
   return (
     <div className="space-y-4">
-      {canReview && task.status === "READY_FOR_REVIEW" ? (
+      {canReview && status === "READY_FOR_REVIEW" ? (
         <section className="rounded-xl border border-[#D6BBFB] bg-[#F4F3FF] p-5">
           <div className="flex items-start gap-3">
             <span className="flex size-10 items-center justify-center rounded-lg bg-white text-[#6941C6]">
@@ -110,9 +103,9 @@ export function TaskActions({
                 {task.assignedTo.name} submitted this work for your approval.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {task.driveUrl ? (
+                {url ? (
                   <Button asChild variant="outline">
-                    <a href={task.driveUrl} target="_blank">Open Drive</a>
+                    <a href={url} target="_blank">Open Drive</a>
                   </Button>
                 ) : null}
                 <Button
@@ -120,7 +113,7 @@ export function TaskActions({
                   className="border-[#F7B27A] text-[#C4320A] hover:bg-[#FFF6ED]"
                   disabled={pending}
                   onClick={() =>
-                    run({ action: "revision", notes: revision }, "Revision requested.")
+                    run({ action: "revision", notes: revision }, "Revision requested.", "REVISION_REQUIRED")
                   }
                 >
                   <RotateCcw className="size-4" />
@@ -128,7 +121,7 @@ export function TaskActions({
                 </Button>
                 <Button
                   disabled={pending}
-                  onClick={() => run({ action: "approve" }, "Task approved successfully")}
+                  onClick={() => run({ action: "approve" }, "Task approved successfully", "COMPLETED")}
                 >
                   Approve Task
                 </Button>
@@ -144,14 +137,14 @@ export function TaskActions({
         </section>
       ) : null}
 
-      {task.status === "REVISION_REQUIRED" ? (
+      {status === "REVISION_REQUIRED" ? (
         <section className="rounded-xl border border-[#F7B27A] bg-[#FFF6ED] p-5">
           <p className="text-sm font-semibold text-[#C4320A]">Revision Required</p>
           <p className="mt-1 text-sm text-[#344054]">Update the work, then resubmit for review.</p>
           <Button
             className="mt-4"
             disabled={pending}
-            onClick={() => run({ action: "start" }, "Revision started.")}
+            onClick={() => run({ action: "start" }, "Revision started.", "IN_PROGRESS")}
           >
             Start Revision
           </Button>
@@ -186,9 +179,7 @@ export function TaskActions({
           ) : null}
           <Button
             disabled={pending}
-            onClick={() =>
-              run({ action: "drive", uploaded, url, note }, "Drive link updated.")
-            }
+            onClick={() => run({ action: "drive", uploaded, url, note }, "Drive link updated.")}
           >
             Save Drive info
           </Button>
@@ -196,21 +187,32 @@ export function TaskActions({
       </section>
 
       <section className="flex flex-wrap gap-2">
-        {task.status === "PENDING" || task.status === "ON_HOLD" ? (
-          <Button disabled={pending} onClick={() => run({ action: "start" }, "Task started.")}>
+        {status === "PENDING" || status === "ON_HOLD" ? (
+          <Button disabled={pending} onClick={() => run({ action: "start" }, "Task started.", "IN_PROGRESS")}>
             Start task
           </Button>
         ) : null}
-        {["PENDING", "IN_PROGRESS", "REVISION_REQUIRED"].includes(task.status) ? (
-          <Button disabled={pending} onClick={() => run({ action: "submit" }, "Submitted for review.")}>
+        {["PENDING", "IN_PROGRESS", "REVISION_REQUIRED"].includes(status) ? (
+          <Button
+            disabled={pending}
+            onClick={() =>
+              run(
+                { action: "submit", uploaded, url, note },
+                "Submitted for review.",
+                "READY_FOR_REVIEW",
+              )
+            }
+          >
             Submit for Review
           </Button>
         ) : null}
-        {canReview && task.status !== "READY_FOR_REVIEW" ? (
+        {canReview && status !== "READY_FOR_REVIEW" ? (
           <Button
             variant="outline"
             disabled={pending}
-            onClick={() => run({ action: "revision", notes: revision }, "Revision requested.")}
+            onClick={() =>
+              run({ action: "revision", notes: revision }, "Revision requested.", "REVISION_REQUIRED")
+            }
           >
             Request Revision
           </Button>
@@ -236,7 +238,7 @@ export function TaskActions({
                     if (pending) return;
                     setPending(true);
                     try {
-                      await taskRequest(task.id, { method: "DELETE" });
+                      await apiJson(`/api/tasks/${task.id}`, { method: "DELETE" });
                       actionOk("Task deleted.");
                       router.push("/tasks");
                     } catch (error) {
@@ -254,7 +256,7 @@ export function TaskActions({
         ) : null}
       </section>
 
-      {canReview && task.status !== "READY_FOR_REVIEW" ? (
+      {canReview && status !== "READY_FOR_REVIEW" ? (
         <Textarea
           value={revision}
           onChange={(event) => setRevision(event.target.value)}

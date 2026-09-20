@@ -26,3 +26,12 @@ export async function requireApiStaff() {
   }
   return result;
 }
+
+export async function requireApiAdmin() {
+  const result = await requireApiUser();
+  if ("error" in result) return result;
+  if (result.user.role !== "ADMIN") {
+    return { error: jsonError("Only an admin can do that.", 403) };
+  }
+  return result;
+}

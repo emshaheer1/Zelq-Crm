@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
+import { reloadList } from "@/lib/client-api";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
@@ -32,7 +33,7 @@ export function DeleteMenuItem({
             await onDelete();
             actionOk(`${label[0]!.toUpperCase()}${label.slice(1)} deleted successfully.`);
             if (redirectTo) router.push(redirectTo);
-            else window.setTimeout(() => router.refresh(), 1800);
+            else reloadList();
           } catch (error) {
             actionCatch(error, "Could not delete.");
           } finally {
@@ -72,7 +73,7 @@ export function DeleteButton({
             await onDelete();
             actionOk(`${label[0]!.toUpperCase()}${label.slice(1)} deleted successfully.`);
             if (redirectTo) router.push(redirectTo);
-            else window.setTimeout(() => router.refresh(), 1800);
+            else reloadList();
           } catch (error) {
             actionCatch(error, "Could not delete.");
           } finally {
