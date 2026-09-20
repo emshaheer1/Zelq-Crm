@@ -6,10 +6,8 @@ import type { AuthUser } from "@/lib/auth";
 import { isStaff } from "@/lib/permissions";
 
 export const taskInclude = {
-  project: { include: { client: true } },
-  assignedTo: true,
-  assignedBy: true,
-  driveUploadedBy: true,
+  project: { select: { id: true, name: true, clientId: true } },
+  assignedTo: { select: { id: true, name: true, avatarUrl: true } },
 } satisfies Prisma.TaskInclude;
 
 export async function taskScope(user: AuthUser): Promise<Prisma.TaskWhereInput> {
@@ -107,7 +105,13 @@ export async function getTeamWorkload() {
   const users = await prisma.user.findMany({
     where: { status: "ACTIVE", role: { not: "ADMIN" } },
     orderBy: { name: "asc" },
-    include: { assignedTasks: true },
+    select: {
+      id: true,
+      name: true,
+      designation: true,
+      avatarUrl: true,
+      assignedTasks: { select: { status: true, completedAt: true, deadline: true } },
+    },
   });
 
   const month = monthRange(new Date().getFullYear(), new Date().getMonth() + 1);
@@ -234,18 +238,30 @@ export async function getDashboardExtras(user: AuthUser) {
   const [projects, activities] = await Promise.all([
     prisma.project.findMany({
       where: { ...projectWhere, status: { in: ["NOT_STARTED", "IN_PROGRESS"] } },
-      include: {
-        client: true,
-        members: { include: { user: true } },
-        tasks: true,
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        deadline: true,
+        client: { select: { id: true, name: true } },
+        members: {
+          select: {
+            id: true,
+            user: { select: { name: true, avatarUrl: true } },
+          },
+        },
+        tasks: { select: { status: true } },
       },
       orderBy: { deadline: "asc" },
       take: 4,
     }),
     prisma.taskActivity.findMany({
       where: { task: scope },
-      include: {
-        user: true,
+      select: {
+        id: true,
+        message: true,
+        createdAt: true,
+        user: { select: { name: true, avatarUrl: true } },
         task: { select: { id: true, title: true } },
       },
       orderBy: { createdAt: "desc" },

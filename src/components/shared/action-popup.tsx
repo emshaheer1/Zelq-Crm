@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 type Kind = "ok" | "err";
 type Notice = { kind: Kind; message: string };
@@ -34,37 +33,35 @@ export function ActionPopup() {
 
   useEffect(() => {
     if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), notice.kind === "ok" ? 1600 : 2200);
+    const timer = setTimeout(() => setNotice(null), notice.kind === "ok" ? 1600 : 2400);
     return () => clearTimeout(timer);
   }, [notice]);
 
+  if (!notice) return null;
+
   return (
-    <Dialog open={Boolean(notice)}>
-      <DialogContent className="z-[80] max-w-sm text-center sm:max-w-sm" showCloseButton={false}>
-        <div className="login-check-pop login-motion flex flex-col items-center gap-3 py-4">
-          {notice?.kind === "ok" ? (
-            <span className="grid size-14 place-items-center rounded-full bg-[#22c55e]">
-              <svg viewBox="0 0 24 24" className="size-8" fill="none" aria-hidden>
-                <path
-                  className="login-check-draw login-motion"
-                  d="M6 12.5L10.2 16.5L18 8"
-                  stroke="white"
-                  strokeWidth="2.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-          ) : (
-            <span className="grid size-14 place-items-center rounded-full bg-[#B42318] text-2xl font-semibold text-white">
-              !
-            </span>
-          )}
-          <DialogTitle className="text-base font-semibold text-[#111827]">
-            {notice?.message}
-          </DialogTitle>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <div className="fixed inset-0 z-[200] grid place-items-center bg-black/40 p-4">
+      <div className="login-check-pop login-motion w-full max-w-sm rounded-2xl bg-white px-6 py-8 text-center shadow-[0_16px_40px_rgba(16,24,40,0.16)]">
+        {notice.kind === "ok" ? (
+          <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#22c55e]">
+            <svg viewBox="0 0 24 24" className="size-8" fill="none" aria-hidden>
+              <path
+                className="login-check-draw login-motion"
+                d="M6 12.5L10.2 16.5L18 8"
+                stroke="white"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        ) : (
+          <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#B42318] text-2xl font-semibold text-white">
+            !
+          </span>
+        )}
+        <p className="mt-3 text-base font-semibold text-[#111827]">{notice.message}</p>
+      </div>
+    </div>
   );
 }

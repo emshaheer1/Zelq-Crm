@@ -1,23 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
-import type { Prisma } from "@prisma/client";
 import { Eye, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import {
-  addTaskComment,
-  approveTask,
-  requestRevision,
-  startTask,
-  submitForReview,
-  updateDriveInfo,
-  deleteTask,
-} from "@/server/actions/tasks";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,9 +21,23 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 
-type Task = Prisma.TaskGetPayload<{
-  include: { assignedTo: true };
-}>;
+type Task = {
+  id: string;
+  status: string;
+  driveUploaded: boolean;
+  driveUrl: string | null;
+  driveNote: string | null;
+  assignedTo: { name: string; avatarUrl: string | null };
+};
+
+async function taskRequest(id: string, init: RequestInit) {
+  const response = await fetch(`/api/tasks/${id}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...init.headers },
+  }).catch(() => null);
+  const result = (response ? await response.json().catch(() => ({})) : {}) as { error?: string };
+  if (!response?.ok) throw new Error(result.error || "Could not update task.");
+}
 
 export function TaskActions({
   task,
@@ -45,23 +49,26 @@ export function TaskActions({
   commentsOnly?: boolean;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [uploaded, setUploaded] = useState(task.driveUploaded);
   const [url, setUrl] = useState(task.driveUrl ?? "");
   const [note, setNote] = useState(task.driveNote ?? "");
   const [comment, setComment] = useState("");
   const [revision, setRevision] = useState("");
 
-  const run = (fn: () => Promise<unknown>, success: string) => {
-    startTransition(async () => {
-      try {
-        await fn();
-        actionOk(success);
-        router.refresh();
-      } catch (error) {
-        actionCatch(error);
-      }
-    });
+  const run = async (body: object, success: string, after?: () => void) => {
+    if (pending) return;
+    setPending(true);
+    try {
+      await taskRequest(task.id, { method: "POST", body: JSON.stringify(body) });
+      actionOk(success);
+      after?.();
+      window.setTimeout(() => router.refresh(), 1800);
+    } catch (error) {
+      actionCatch(error);
+    } finally {
+      setPending(false);
+    }
   };
 
   if (commentsOnly) {
@@ -79,10 +86,7 @@ export function TaskActions({
             className="mt-3"
             disabled={pending}
             onClick={() =>
-              run(async () => {
-                await addTaskComment(task.id, comment);
-                setComment("");
-              }, "Comment added.")
+              run({ action: "comment", comment }, "Comment added.", () => setComment(""))
             }
           >
             Send
@@ -116,16 +120,16 @@ export function TaskActions({
                   className="border-[#F7B27A] text-[#C4320A] hover:bg-[#FFF6ED]"
                   disabled={pending}
                   onClick={() =>
-                    run(async () => {
-                      if (!revision.trim()) throw new Error("Add revision instructions.");
-                      await requestRevision(task.id, revision);
-                    }, "Revision requested.")
+                    run({ action: "revision", notes: revision }, "Revision requested.")
                   }
                 >
                   <RotateCcw className="size-4" />
                   Request Revision
                 </Button>
-                <Button disabled={pending} onClick={() => run(() => approveTask(task.id), "Task approved successfully")}>
+                <Button
+                  disabled={pending}
+                  onClick={() => run({ action: "approve" }, "Task approved successfully")}
+                >
                   Approve Task
                 </Button>
               </div>
@@ -147,7 +151,7 @@ export function TaskActions({
           <Button
             className="mt-4"
             disabled={pending}
-            onClick={() => run(() => startTask(task.id), "Revision started.")}
+            onClick={() => run({ action: "start" }, "Revision started.")}
           >
             Start Revision
           </Button>
@@ -183,10 +187,7 @@ export function TaskActions({
           <Button
             disabled={pending}
             onClick={() =>
-              run(
-                () => updateDriveInfo(task.id, { uploaded, url, note }),
-                "Drive link updated.",
-              )
+              run({ action: "drive", uploaded, url, note }, "Drive link updated.")
             }
           >
             Save Drive info
@@ -196,15 +197,12 @@ export function TaskActions({
 
       <section className="flex flex-wrap gap-2">
         {task.status === "PENDING" || task.status === "ON_HOLD" ? (
-          <Button disabled={pending} onClick={() => run(() => startTask(task.id), "Task started.")}>
+          <Button disabled={pending} onClick={() => run({ action: "start" }, "Task started.")}>
             Start task
           </Button>
         ) : null}
         {["PENDING", "IN_PROGRESS", "REVISION_REQUIRED"].includes(task.status) ? (
-          <Button
-            disabled={pending}
-            onClick={() => run(() => submitForReview(task.id), "Submitted for review.")}
-          >
+          <Button disabled={pending} onClick={() => run({ action: "submit" }, "Submitted for review.")}>
             Submit for Review
           </Button>
         ) : null}
@@ -212,12 +210,7 @@ export function TaskActions({
           <Button
             variant="outline"
             disabled={pending}
-            onClick={() =>
-              run(async () => {
-                if (!revision.trim()) throw new Error("Add revision instructions.");
-                await requestRevision(task.id, revision);
-              }, "Revision requested.")
-            }
+            onClick={() => run({ action: "revision", notes: revision }, "Revision requested.")}
           >
             Request Revision
           </Button>
@@ -233,18 +226,25 @@ export function TaskActions({
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Task?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This removes the task and its comments. This cannot be undone.
+                  This removes the task, its comments, and its notifications. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() =>
-                    run(async () => {
-                      await deleteTask(task.id);
+                  onClick={async () => {
+                    if (pending) return;
+                    setPending(true);
+                    try {
+                      await taskRequest(task.id, { method: "DELETE" });
+                      actionOk("Task deleted.");
                       router.push("/tasks");
-                    }, "Task deleted.")
-                  }
+                    } catch (error) {
+                      actionCatch(error);
+                    } finally {
+                      setPending(false);
+                    }
+                  }}
                 >
                   Delete
                 </AlertDialogAction>

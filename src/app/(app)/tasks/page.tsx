@@ -25,7 +25,10 @@ export default async function TasksPage({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
-  ]);
+  ]).catch((error) => {
+    console.error("tasks.page", error);
+    return [[], [], [], []];
+  });
 
   return (
     <TasksWorkspace

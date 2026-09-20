@@ -34,7 +34,7 @@ export function ClientNotes({ client }: { client: Client }) {
                 notes,
               });
               actionOk("Client saved successfully.");
-              router.refresh();
+              window.setTimeout(() => router.refresh(), 1800);
             } catch (error) {
               actionCatch(error);
             }

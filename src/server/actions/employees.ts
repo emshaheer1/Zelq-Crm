@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { assertAdmin, requireUser } from "@/lib/permissions";
@@ -25,8 +24,6 @@ export async function createEmployee(input: unknown) {
     },
   });
 
-  revalidatePath("/employees");
-  revalidatePath("/settings");
   return { id: employee.id };
 }
 
@@ -50,10 +47,6 @@ export async function updateEmployee(id: string, input: unknown) {
         : {}),
     },
   });
-
-  revalidatePath("/employees");
-  revalidatePath(`/employees/${id}`);
-  revalidatePath("/settings");
 }
 
 export async function deactivateEmployee(id: string) {
@@ -65,9 +58,6 @@ export async function deactivateEmployee(id: string) {
     data: { status: "INACTIVE" },
   });
   await prisma.session.deleteMany({ where: { userId: id } });
-  revalidatePath("/employees");
-  revalidatePath(`/employees/${id}`);
-  revalidatePath("/settings");
 }
 
 export async function activateEmployee(id: string) {
@@ -77,6 +67,4 @@ export async function activateEmployee(id: string) {
     where: { id },
     data: { status: "ACTIVE" },
   });
-  revalidatePath("/employees");
-  revalidatePath(`/employees/${id}`);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -16,7 +16,7 @@ export function DeleteMenuItem({
   redirectTo?: string;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
   return (
     <DropdownMenuItem
@@ -24,17 +24,21 @@ export function DeleteMenuItem({
       className="text-destructive focus:text-destructive"
       onSelect={(event) => {
         event.preventDefault();
+        if (pending) return;
         if (!window.confirm(`Delete this ${label}? This cannot be undone.`)) return;
-        startTransition(async () => {
+        setPending(true);
+        void (async () => {
           try {
             await onDelete();
             actionOk(`${label[0]!.toUpperCase()}${label.slice(1)} deleted successfully.`);
             if (redirectTo) router.push(redirectTo);
-            else router.refresh();
+            else window.setTimeout(() => router.refresh(), 1800);
           } catch (error) {
             actionCatch(error, "Could not delete.");
+          } finally {
+            setPending(false);
           }
-        });
+        })();
       }}
     >
       Delete
@@ -52,7 +56,7 @@ export function DeleteButton({
   redirectTo?: string;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
   return (
     <Button
@@ -60,17 +64,21 @@ export function DeleteButton({
       disabled={pending}
       className="text-destructive"
       onClick={() => {
+        if (pending) return;
         if (!window.confirm(`Delete this ${label}? This cannot be undone.`)) return;
-        startTransition(async () => {
+        setPending(true);
+        void (async () => {
           try {
             await onDelete();
             actionOk(`${label[0]!.toUpperCase()}${label.slice(1)} deleted successfully.`);
             if (redirectTo) router.push(redirectTo);
-            else router.refresh();
+            else window.setTimeout(() => router.refresh(), 1800);
           } catch (error) {
             actionCatch(error, "Could not delete.");
+          } finally {
+            setPending(false);
           }
-        });
+        })();
       }}
     >
       Delete

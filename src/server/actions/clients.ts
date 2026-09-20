@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertStaff, requireUser } from "@/lib/permissions";
 import { clientSchema } from "@/lib/validations";
@@ -21,8 +20,6 @@ export async function updateClient(id: string, input: unknown) {
       notes: data.notes || null,
     },
   });
-  revalidatePath("/clients");
-  revalidatePath(`/clients/${id}`);
 }
 
 export async function deleteClient(id: string) {
@@ -30,7 +27,4 @@ export async function deleteClient(id: string) {
   assertStaff(user);
   await prisma.project.deleteMany({ where: { clientId: id } });
   await prisma.client.delete({ where: { id } });
-  revalidatePath("/clients");
-  revalidatePath("/projects");
-  revalidatePath("/dashboard");
 }

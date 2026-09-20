@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireDriveUrl } from "@/lib/drive";
@@ -8,16 +7,6 @@ import { logActivity, notify } from "@/lib/notify";
 import { assertStaff, canAccessTask, requireUser } from "@/lib/permissions";
 import { taskSchema } from "@/lib/validations";
 import { taskStatusLabel } from "@/lib/labels";
-
-function revalidateTask(id: string) {
-  revalidatePath("/tasks");
-  revalidatePath(`/tasks/${id}`);
-  revalidatePath("/dashboard");
-  revalidatePath("/projects");
-  revalidatePath("/calendar");
-  revalidatePath("/reports");
-  revalidatePath("/employees");
-}
 
 export async function createTask(input: unknown) {
   const user = await requireUser();
@@ -55,7 +44,6 @@ export async function createTask(input: unknown) {
     href: `/tasks/${task.id}`,
   });
 
-  revalidateTask(task.id);
   return { id: task.id };
 }
 
@@ -99,16 +87,15 @@ export async function updateTask(id: string, input: unknown) {
     });
   }
 
-  revalidateTask(id);
 }
 
 export async function deleteTask(id: string) {
   const user = await requireUser();
   assertStaff(user);
+  await prisma.notification.deleteMany({
+    where: { OR: [{ taskId: id }, { href: `/tasks/${id}` }] },
+  });
   await prisma.task.delete({ where: { id } });
-  revalidatePath("/tasks");
-  revalidatePath("/dashboard");
-  revalidatePath("/calendar");
 }
 
 export async function startTask(id: string) {
@@ -118,7 +105,7 @@ export async function startTask(id: string) {
   if (!canAccessTask(user, task.assignedToId)) {
     throw new Error("You cannot update this task.");
   }
-  if (task.status !== "PENDING" && task.status !== "ON_HOLD") {
+  if (!["PENDING", "ON_HOLD", "REVISION_REQUIRED"].includes(task.status)) {
     throw new Error("This task cannot be started from its current status.");
   }
 
@@ -127,7 +114,6 @@ export async function startTask(id: string) {
     data: { status: "IN_PROGRESS" },
   });
   await logActivity(id, `${user.name} changed status to In Progress.`, user.id);
-  revalidateTask(id);
 }
 
 export async function setTaskOnHold(id: string) {
@@ -138,7 +124,6 @@ export async function setTaskOnHold(id: string) {
     data: { status: "ON_HOLD" },
   });
   await logActivity(id, `${user.name} placed the task on hold.`, user.id);
-  revalidateTask(id);
 }
 
 export async function updateDriveInfo(
@@ -171,8 +156,6 @@ export async function updateDriveInfo(
   if (input.uploaded) {
     await logActivity(id, `${user.name} added a Google Drive link.`, user.id);
   }
-
-  revalidateTask(id);
 }
 
 export async function submitForReview(id: string) {
@@ -209,7 +192,6 @@ export async function submitForReview(id: string) {
     taskId: task.id,
     href: `/tasks/${task.id}`,
   });
-  revalidateTask(id);
 }
 
 export async function approveTask(id: string, notes?: string) {
@@ -245,7 +227,6 @@ export async function approveTask(id: string, notes?: string) {
     taskId: task.id,
     href: `/tasks/${task.id}`,
   });
-  revalidateTask(id);
 }
 
 export async function requestRevision(id: string, notes: string) {
@@ -280,7 +261,6 @@ export async function requestRevision(id: string, notes: string) {
     taskId: task.id,
     href: `/tasks/${task.id}`,
   });
-  revalidateTask(id);
 }
 
 export async function addTaskComment(id: string, body: string) {
@@ -295,7 +275,6 @@ export async function addTaskComment(id: string, body: string) {
   await prisma.taskComment.create({
     data: { taskId: id, userId: user.id, body: body.trim() },
   });
-  revalidateTask(id);
 }
 
 export async function changeTaskPriority(id: string, priority: "HIGH" | "MEDIUM" | "LOW") {
@@ -303,7 +282,6 @@ export async function changeTaskPriority(id: string, priority: "HIGH" | "MEDIUM"
   assertStaff(user);
   await prisma.task.update({ where: { id }, data: { priority } });
   await logActivity(id, `${user.name} changed priority to ${priority.toLowerCase()}.`, user.id);
-  revalidateTask(id);
 }
 
 export { taskStatusLabel };

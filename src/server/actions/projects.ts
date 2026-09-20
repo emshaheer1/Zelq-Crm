@@ -1,16 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { isValidDriveUrl } from "@/lib/drive";
 import { assertStaff, requireUser } from "@/lib/permissions";
 import { projectSchema } from "@/lib/validations";
-
-function revalidateProjects(id?: string) {
-  revalidatePath("/projects");
-  revalidatePath("/dashboard");
-  if (id) revalidatePath(`/projects/${id}`);
-}
 
 export async function createProject(input: unknown) {
   const user = await requireUser();
@@ -39,7 +32,6 @@ export async function createProject(input: unknown) {
     },
   });
 
-  revalidateProjects(project.id);
   return { id: project.id };
 }
 
@@ -74,7 +66,6 @@ export async function updateProject(id: string, input: unknown) {
     }),
   ]);
 
-  revalidateProjects(id);
 }
 
 export async function archiveProject(id: string) {
@@ -84,22 +75,16 @@ export async function archiveProject(id: string) {
     where: { id },
     data: { status: "COMPLETED" },
   });
-  revalidateProjects(id);
 }
 
 export async function deleteProject(id: string) {
   const user = await requireUser();
   assertStaff(user);
   await prisma.project.delete({ where: { id } });
-  revalidatePath("/projects");
-  revalidatePath("/tasks");
-  revalidatePath("/dashboard");
-  revalidatePath("/calendar");
 }
 
 export async function updateProjectNotes(id: string, notes: string) {
   const user = await requireUser();
   assertStaff(user);
   await prisma.project.update({ where: { id }, data: { notes } });
-  revalidateProjects(id);
 }

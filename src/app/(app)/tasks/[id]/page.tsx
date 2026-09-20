@@ -28,13 +28,37 @@ export default async function TaskDetailPage({
   const task = await prisma.task.findUnique({
     where: { id },
     include: {
-      project: { include: { client: true, manager: true } },
-      assignedTo: true,
-      assignedBy: true,
-      driveUploadedBy: true,
-      comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
-      activities: { include: { user: true }, orderBy: { createdAt: "desc" } },
-      reviews: { include: { reviewer: true }, orderBy: { createdAt: "desc" } },
+      project: { select: { id: true, name: true } },
+      assignedTo: { select: { id: true, name: true, avatarUrl: true, role: true } },
+      assignedBy: { select: { id: true, name: true } },
+      comments: {
+        select: {
+          id: true,
+          body: true,
+          createdAt: true,
+          user: { select: { name: true, avatarUrl: true, role: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+      activities: {
+        select: {
+          id: true,
+          message: true,
+          createdAt: true,
+          user: { select: { name: true, avatarUrl: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      reviews: {
+        select: {
+          id: true,
+          action: true,
+          notes: true,
+          createdAt: true,
+          reviewer: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 

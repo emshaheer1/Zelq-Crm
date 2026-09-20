@@ -46,7 +46,7 @@ export function EmployeeAdminActions({ employee }: { employee: User }) {
                     try {
                       await deactivateEmployee(employee.id);
                       actionOk("Employee deactivated successfully.");
-                      router.refresh();
+                      window.setTimeout(() => router.refresh(), 1800);
                     } catch (error) {
                       actionCatch(error);
                     }
@@ -65,7 +65,7 @@ export function EmployeeAdminActions({ employee }: { employee: User }) {
             startTransition(async () => {
               await activateEmployee(employee.id);
               actionOk("Employee activated successfully.");
-              router.refresh();
+              window.setTimeout(() => router.refresh(), 1800);
             })
           }
         >

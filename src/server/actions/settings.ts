@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { assertAdmin, requireUser } from "@/lib/permissions";
@@ -28,7 +27,6 @@ export async function updateCompany(input: unknown) {
       logoUrl: data.logoUrl || null,
     },
   });
-  revalidatePath("/settings");
 }
 
 export async function changePassword(input: unknown) {
@@ -50,5 +48,4 @@ export async function updateNotificationPref(notifyInApp: boolean) {
     where: { id: user.id },
     data: { notifyInApp },
   });
-  revalidatePath("/settings");
 }

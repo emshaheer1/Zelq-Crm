@@ -94,7 +94,7 @@ export function NewTaskDialog({
                 });
                 actionOk("Task created successfully.");
                 onOpenChange(false);
-                window.setTimeout(() => router.refresh(), 300);
+                window.setTimeout(() => router.refresh(), 1800);
               } catch (error) {
                 actionCatch(error);
               }
@@ -226,7 +226,7 @@ export function NewProjectDialog({
                 });
                 actionOk("Project created successfully.");
                 onOpenChange(false);
-                window.setTimeout(() => router.refresh(), 300);
+                window.setTimeout(() => router.refresh(), 1800);
               } catch (error) {
                 actionCatch(error);
               }
@@ -482,7 +482,7 @@ export function NewEventDialog({
                 });
                 actionOk("Event created successfully.");
                 onOpenChange(false);
-                window.setTimeout(() => router.refresh(), 300);
+                window.setTimeout(() => router.refresh(), 1800);
               } catch (error) {
                 actionCatch(error);
               }
@@ -608,7 +608,7 @@ export function NewEmployeeDialog({
                 });
                 actionOk("Employee created successfully.");
                 onOpenChange(false);
-                window.setTimeout(() => router.refresh(), 300);
+                window.setTimeout(() => router.refresh(), 1800);
               } catch (error) {
                 actionCatch(error);
               }

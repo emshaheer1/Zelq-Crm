@@ -15,10 +15,22 @@ export default async function ProjectsPage({
   const [projects, clients, managers, employees] = await Promise.all([
     prisma.project.findMany({
       where: scope,
-      include: {
-        client: true,
-        manager: true,
-        members: { include: { user: true } },
+      select: {
+        id: true,
+        name: true,
+        clientId: true,
+        managerId: true,
+        status: true,
+        priority: true,
+        deadline: true,
+        client: { select: { id: true, name: true } },
+        members: {
+          select: {
+            id: true,
+            userId: true,
+            user: { select: { name: true, avatarUrl: true } },
+          },
+        },
         tasks: { select: { status: true } },
       },
       orderBy: { updatedAt: "desc" },

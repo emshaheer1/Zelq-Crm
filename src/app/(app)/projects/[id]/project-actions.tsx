@@ -43,7 +43,7 @@ export function ProjectActions({
               try {
                 await updateProjectNotes(project.id, notes);
                 actionOk("Project saved successfully.");
-                router.refresh();
+                window.setTimeout(() => router.refresh(), 1800);
               } catch (error) {
                 actionCatch(error);
               }
@@ -73,7 +73,7 @@ export function ProjectActions({
                     try {
                       await archiveProject(project.id);
                       actionOk("Project archived successfully.");
-                      router.refresh();
+                      window.setTimeout(() => router.refresh(), 1800);
                     } catch (error) {
                       actionCatch(error);
                     }

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
+import type { Priority, ProjectStatus, TaskStatus } from "@prisma/client";
 import { CalendarDays, MoreHorizontal, Plus, Search, UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -26,14 +26,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type ProjectItem = Prisma.ProjectGetPayload<{
-  include: {
-    client: true;
-    manager: true;
-    members: { include: { user: true } };
-    tasks: { select: { status: true } };
-  };
-}> & { progress: number };
+type ProjectItem = {
+  id: string;
+  name: string;
+  clientId: string;
+  managerId: string;
+  status: ProjectStatus;
+  priority: Priority;
+  deadline: Date | null;
+  client: { id: string; name: string };
+  members: {
+    id: string;
+    userId: string;
+    user: { name: string; avatarUrl: string | null };
+  }[];
+  tasks: { status: TaskStatus }[];
+  progress: number;
+};
 
 export function ProjectsWorkspace({
   projects,

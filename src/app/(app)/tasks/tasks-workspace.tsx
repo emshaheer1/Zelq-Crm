@@ -37,7 +37,6 @@ import { AppSelect } from "@/components/ui/app-select";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Surface } from "@/components/shared/surface";
 import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
-import { deleteTask } from "@/server/actions/tasks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -234,7 +233,14 @@ export function TasksWorkspace({
                           <Link href={`/tasks/${task.id}`}>Edit</Link>
                         </DropdownMenuItem>
                         {canCreate ? (
-                          <DeleteMenuItem label="task" onDelete={() => deleteTask(task.id)} />
+                          <DeleteMenuItem
+                            label="task"
+                            onDelete={async () => {
+                              const response = await fetch(`/api/tasks/${task.id}`, { method: "DELETE" }).catch(() => null);
+                              const result = (response ? await response.json().catch(() => ({})) : {}) as { error?: string };
+                              if (!response?.ok) throw new Error(result.error || "Could not delete task.");
+                            }}
+                          />
                         ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>

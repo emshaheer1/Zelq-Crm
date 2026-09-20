@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/permissions";
 
@@ -31,8 +30,6 @@ export async function markNotificationRead(id: string) {
     where: { id, userId: user.id },
     data: { read: true },
   });
-  revalidatePath("/notifications");
-  revalidatePath("/dashboard");
 }
 
 export async function markAllNotificationsRead() {
@@ -41,6 +38,4 @@ export async function markAllNotificationsRead() {
     where: { userId: user.id, read: false },
     data: { read: true },
   });
-  revalidatePath("/notifications");
-  revalidatePath("/dashboard");
 }

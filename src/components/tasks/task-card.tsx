@@ -1,17 +1,21 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
-import type { Prisma } from "@prisma/client";
+import type { Priority, TaskStatus } from "@prisma/client";
 import { DriveBadge, PriorityBadge } from "@/components/shared/status-badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { formatDate, isOverdue } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
-type TaskCardTask = Prisma.TaskGetPayload<{
-  include: {
-    project: true;
-    assignedTo: true;
-  };
-}>;
+type TaskCardTask = {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  priority: Priority;
+  deadline: Date | string | null;
+  driveUploaded: boolean;
+  project: { name: string };
+  assignedTo: { name: string; avatarUrl: string | null };
+};
 
 export function TaskCard({ task, compact = false }: { task: TaskCardTask; compact?: boolean }) {
   const overdue = isOverdue(task.deadline, task.status);

@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { assertStaff, requireUser } from "@/lib/permissions";
 import { eventSchema } from "@/lib/validations";
@@ -27,8 +26,6 @@ export async function createCalendarEvent(input: unknown) {
     },
   });
 
-  revalidatePath("/calendar");
-  revalidatePath("/dashboard");
   return { id: event.id };
 }
 
@@ -56,14 +53,10 @@ export async function updateCalendarEvent(id: string, input: unknown) {
       },
     }),
   ]);
-
-  revalidatePath("/calendar");
 }
 
 export async function deleteCalendarEvent(id: string) {
   const user = await requireUser();
   assertStaff(user);
   await prisma.calendarEvent.delete({ where: { id } });
-  revalidatePath("/calendar");
-  revalidatePath("/dashboard");
 }
