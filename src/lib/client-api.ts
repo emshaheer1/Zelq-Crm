@@ -21,5 +21,5 @@ export async function apiJson<T = { ok?: boolean; id?: string; error?: string }>
 export function reloadList() {
   window.setTimeout(() => {
     window.location.replace(window.location.pathname);
-  }, 1500);
+  }, 2200);
 }

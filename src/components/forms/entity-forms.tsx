@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { actionCatch, actionOk } from "@/components/shared/action-popup";
+import { actionCatch, actionErr, actionOk } from "@/components/shared/action-popup";
 import { apiJson, reloadList } from "@/lib/client-api";
 import type { Client, Project, User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -382,9 +382,11 @@ export function NewClientDialog({
             if (!response?.ok || !result.id) {
               const message = result.error || "Could not save client.";
               setFormError(message);
+              actionErr(message);
               return;
             }
             close(false);
+            actionOk("Client created successfully.");
             if (onCreated) {
               onCreated({
                 id: result.id,

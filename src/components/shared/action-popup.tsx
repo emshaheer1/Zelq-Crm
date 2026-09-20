@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Kind = "ok" | "err";
 type Notice = { kind: Kind; message: string };
@@ -23,8 +24,10 @@ export function actionCatch(error: unknown, fallback = "Something went wrong. Pl
 
 export function ActionPopup() {
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     emit = setNotice;
     return () => {
       emit = null;
@@ -33,14 +36,14 @@ export function ActionPopup() {
 
   useEffect(() => {
     if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), notice.kind === "ok" ? 1600 : 2400);
+    const timer = setTimeout(() => setNotice(null), notice.kind === "ok" ? 2000 : 2600);
     return () => clearTimeout(timer);
   }, [notice]);
 
-  if (!notice) return null;
+  if (!mounted || !notice) return null;
 
-  return (
-    <div className="fixed inset-0 z-[200] grid place-items-center bg-black/40 p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[400] grid place-items-center bg-black/40 p-4">
       <div className="login-check-pop login-motion w-full max-w-sm rounded-2xl bg-white px-6 py-8 text-center shadow-[0_16px_40px_rgba(16,24,40,0.16)]">
         {notice.kind === "ok" ? (
           <span className="mx-auto grid size-14 place-items-center rounded-full bg-[#22c55e]">
@@ -62,6 +65,7 @@ export function ActionPopup() {
         )}
         <p className="mt-3 text-base font-semibold text-[#111827]">{notice.message}</p>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
