@@ -8,10 +8,10 @@ export const loginSchema = z.object({
 export const clientSchema = z.object({
   name: z.string().min(2, "Client name is required"),
   companyName: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
+  email: z.union([z.string().email(), z.literal("")]).optional(),
   phone: z.string().optional(),
   country: z.string().optional(),
-  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  status: z.enum(["ACTIVE", "INACTIVE"]).nullish().transform((value) => value ?? "ACTIVE"),
   notes: z.string().optional(),
 });
 
