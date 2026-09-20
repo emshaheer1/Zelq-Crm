@@ -314,7 +314,8 @@ export function NewClientDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  const [formError, setFormError] = useState("");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -324,30 +325,42 @@ export function NewClientDialog({
         </DialogHeader>
         <form
           className="grid gap-3"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
-            startTransition(async () => {
-              try {
-                const result = await createClient({
-                  name: form.get("name"),
-                  companyName: form.get("companyName"),
-                  email: form.get("email"),
-                  phone: form.get("phone"),
-                  country: form.get("country"),
-                  status: form.get("status"),
-                  notes: form.get("notes"),
-                });
-                if ("error" in result) throw new Error(result.error);
-                toast.success("Client created.");
-                onOpenChange(false);
-                router.push(`/clients/${result.id}`);
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
-              }
-            });
+            setFormError("");
+            setPending(true);
+            const result = await createClient({
+              name: form.get("name"),
+              companyName: form.get("companyName"),
+              email: form.get("email"),
+              phone: form.get("phone"),
+              country: form.get("country"),
+              status: form.get("status"),
+              notes: form.get("notes"),
+            }).catch((error: unknown) => ({
+              error: error instanceof Error && error.message
+                ? error.message
+                : "Could not save client.",
+            }));
+            setPending(false);
+            if (!result || !("id" in result) || !result.id) {
+              const message =
+                result && "error" in result && result.error
+                  ? result.error
+                  : "Could not save client.";
+              setFormError(message);
+              toast.error(message);
+              return;
+            }
+            toast.success("Client created.");
+            onOpenChange(false);
+            router.push(`/clients/${result.id}`);
           }}
         >
+          {formError ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>
+          ) : null}
           <Field label="Client Name">
             <Input name="name" required />
           </Field>

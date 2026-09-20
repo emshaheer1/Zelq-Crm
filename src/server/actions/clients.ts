@@ -1,24 +1,25 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { assertStaff, requireUser } from "@/lib/permissions";
 import { clientSchema } from "@/lib/validations";
 
 export async function createClient(input: unknown) {
-  const user = await requireUser();
-  assertStaff(user);
-  const raw = (input ?? {}) as Record<string, unknown>;
-  const parsed = clientSchema.safeParse({
-    ...raw,
-    email: typeof raw.email === "string" && !raw.email.trim() ? undefined : raw.email,
-    status: raw.status || "ACTIVE",
-  });
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid client details." };
-  }
-  const data = parsed.data;
   try {
+    const user = await requireUser();
+    assertStaff(user);
+    const raw = (input ?? {}) as Record<string, unknown>;
+    const parsed = clientSchema.safeParse({
+      ...raw,
+      email: typeof raw.email === "string" && !raw.email.trim() ? undefined : raw.email,
+      status: raw.status || "ACTIVE",
+    });
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Invalid client details." };
+    }
+    const data = parsed.data;
     const client = await prisma.client.create({
       data: {
         name: data.name,
@@ -34,6 +35,7 @@ export async function createClient(input: unknown) {
     revalidatePath("/clients");
     return { id: client.id };
   } catch (error) {
+    unstable_rethrow(error);
     console.error("createClient", error);
     return { error: error instanceof Error ? error.message.slice(0, 280) : "Could not save client." };
   }

@@ -6,12 +6,12 @@ import { requireUser } from "@/lib/permissions";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const [unread, notifications] = await Promise.all([
-    prisma.notification.count({ where: { userId: user.id, read: false } }),
+    prisma.notification.count({ where: { userId: user.id, read: false } }).catch(() => 0),
     prisma.notification.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       take: 8,
-    }),
+    }).catch(() => []),
   ]);
 
   return (
