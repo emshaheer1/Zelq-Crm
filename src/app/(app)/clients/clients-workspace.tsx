@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { Building2, MoreHorizontal, Plus } from "lucide-react";
@@ -35,7 +35,10 @@ export function ClientsWorkspace({
   clients: Prisma.ClientGetPayload<{ include: { projects: true } }>[];
   openCreate: boolean;
 }) {
-  const [open, setOpen] = useState(openCreate);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (openCreate) setOpen(true);
+  }, [openCreate]);
 
   return (
     <div className="space-y-6">

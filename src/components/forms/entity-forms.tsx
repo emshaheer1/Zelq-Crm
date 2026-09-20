@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { DateField } from "@/components/ui/date-field";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createClient } from "@/server/actions/clients";
 import { createProject } from "@/server/actions/projects";
 import { createTask } from "@/server/actions/tasks";
 import { createCalendarEvent } from "@/server/actions/calendar";
@@ -330,25 +329,23 @@ export function NewClientDialog({
             const form = new FormData(event.currentTarget);
             setFormError("");
             setPending(true);
-            const result = await createClient({
-              name: form.get("name"),
-              companyName: form.get("companyName"),
-              email: form.get("email"),
-              phone: form.get("phone"),
-              country: form.get("country"),
-              status: form.get("status"),
-              notes: form.get("notes"),
-            }).catch((error: unknown) => ({
-              error: error instanceof Error && error.message
-                ? error.message
-                : "Could not save client.",
-            }));
+            const response = await fetch("/api/clients", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: String(form.get("name") ?? ""),
+                companyName: String(form.get("companyName") ?? ""),
+                email: String(form.get("email") ?? ""),
+                phone: String(form.get("phone") ?? ""),
+                country: String(form.get("country") ?? ""),
+                status: String(form.get("status") ?? "ACTIVE"),
+                notes: String(form.get("notes") ?? ""),
+              }),
+            }).catch(() => null);
             setPending(false);
-            if (!result || !("id" in result) || !result.id) {
-              const message =
-                result && "error" in result && result.error
-                  ? result.error
-                  : "Could not save client.";
+            const result = response ? ((await response.json().catch(() => ({}))) as { id?: string; error?: string }) : {};
+            if (!response?.ok || !result.id) {
+              const message = result.error || "Could not save client.";
               setFormError(message);
               toast.error(message);
               return;
