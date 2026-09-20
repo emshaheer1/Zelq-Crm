@@ -338,6 +338,7 @@ export function NewClientDialog({
                   status: form.get("status"),
                   notes: form.get("notes"),
                 });
+                if ("error" in result) throw new Error(result.error);
                 toast.success("Client created.");
                 onOpenChange(false);
                 router.push(`/clients/${result.id}`);

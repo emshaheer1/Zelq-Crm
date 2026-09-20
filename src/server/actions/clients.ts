@@ -15,7 +15,7 @@ export async function createClient(input: unknown) {
     status: raw.status || "ACTIVE",
   });
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Invalid client details.");
+    return { error: parsed.error.issues[0]?.message ?? "Invalid client details." };
   }
   const data = parsed.data;
   try {
@@ -28,13 +28,14 @@ export async function createClient(input: unknown) {
         country: data.country || null,
         status: data.status,
         notes: data.notes || null,
+        updatedAt: new Date(),
       },
     });
     revalidatePath("/clients");
     return { id: client.id };
   } catch (error) {
     console.error("createClient", error);
-    throw new Error(error instanceof Error ? error.message.slice(0, 280) : "Could not save client.");
+    return { error: error instanceof Error ? error.message.slice(0, 280) : "Could not save client." };
   }
 }
 

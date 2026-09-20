@@ -12,6 +12,9 @@ export default async function ClientsPage({
   const clients = await prisma.client.findMany({
     include: { projects: true },
     orderBy: { name: "asc" },
+  }).catch((error) => {
+    console.error("clients.page", error);
+    return [];
   });
 
   return <ClientsWorkspace clients={clients} openCreate={params.new === "1"} />;
