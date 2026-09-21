@@ -254,7 +254,7 @@ export function NewProjectDialog({
               >
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>
-                    {client.companyName ? `${client.name} — ${client.companyName}` : client.name}
+                    {client.name}
                   </option>
                 ))}
               </AppSelect>
