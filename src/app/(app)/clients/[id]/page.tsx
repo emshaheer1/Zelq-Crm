@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Building2 } from "lucide-react";
-import { ClientAvatar } from "@/components/shared/user-avatar";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/permissions";
 import { PageHeader } from "@/components/shared/page-header";
@@ -10,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Surface, SectionTitle } from "@/components/shared/surface";
 import { ClientNotes } from "./client-notes";
 import { ClientDrive } from "./client-drive";
+import { ClientLogo } from "./client-logo";
 import { ClientDeleteButton } from "./client-delete-button";
 
 export default async function ClientDetailPage({
@@ -30,6 +30,7 @@ export default async function ClientDetailPage({
       country: true,
       status: true,
       notes: true,
+      logoUrl: true,
       driveUrl: true,
       projects: {
         select: {
@@ -47,7 +48,7 @@ export default async function ClientDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-4">
-        <ClientAvatar name={client.name} id={client.id} className="size-14" />
+        <ClientLogo id={client.id} name={client.name} logoUrl={client.logoUrl} />
         <div className="min-w-0 flex-1">
           <PageHeader
             title={client.name}

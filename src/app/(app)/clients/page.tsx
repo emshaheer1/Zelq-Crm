@@ -16,6 +16,7 @@ export default async function ClientsPage({
       companyName: true,
       email: true,
       status: true,
+      logoUrl: true,
       updatedAt: true,
       _count: { select: { projects: true } },
     },

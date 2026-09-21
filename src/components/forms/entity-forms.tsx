@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { actionCatch, actionErr, actionOk } from "@/components/shared/action-popup";
 import { apiJson, reloadList } from "@/lib/client-api";
+import { compressLogo } from "@/lib/client-logo";
+import { ClientAvatar } from "@/components/shared/user-avatar";
 import type { Client, Project, User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -354,9 +356,13 @@ export function NewClientDialog({
 }) {
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
 
   function close(next: boolean) {
-    if (!next) setFormError("");
+    if (!next) {
+      setFormError("");
+      setLogoUrl("");
+    }
     onOpenChange(next);
   }
 
@@ -384,6 +390,7 @@ export function NewClientDialog({
                 country: String(form.get("country") ?? ""),
                 status: String(form.get("status") ?? "ACTIVE"),
                 notes: String(form.get("notes") ?? ""),
+                logoUrl,
               }),
             }).catch(() => null);
             setPending(false);
@@ -424,6 +431,31 @@ export function NewClientDialog({
           {formError ? (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>
           ) : null}
+          <Field label="Client Logo">
+            <div className="flex items-center gap-3">
+              <ClientAvatar name="Client logo" src={logoUrl || null} className="size-12" />
+              <label className="inline-flex">
+                <span className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-border bg-white px-3 text-[13px] font-medium text-foreground hover:bg-muted">
+                  {logoUrl ? "Change logo" : "Upload logo"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    try {
+                      setLogoUrl(await compressLogo(file));
+                    } catch (error) {
+                      actionCatch(error);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </Field>
           <Field label="Client Name">
             <Input name="name" required />
           </Field>

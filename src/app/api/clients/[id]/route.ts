@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isClientLogo } from "@/lib/client-logo";
 import { isValidDriveUrl } from "@/lib/drive";
 import { clientSchema } from "@/lib/validations";
 import { jsonError, requireApiStaff } from "@/lib/api-guard";
@@ -13,6 +14,18 @@ export async function PATCH(
     if ("error" in auth) return auth.error;
     const { id } = await params;
     const body = ((await request.json()) ?? {}) as Record<string, unknown>;
+
+    if (typeof body.logoUrl === "string" && !("name" in body)) {
+      const url = body.logoUrl.trim();
+      if (url && !isClientLogo(url)) {
+        return jsonError("Upload a smaller image file.");
+      }
+      await prisma.client.update({
+        where: { id },
+        data: { logoUrl: url || null },
+      });
+      return NextResponse.json({ ok: true });
+    }
 
     if (typeof body.driveUrl === "string" && !("name" in body)) {
       const url = body.driveUrl.trim();
@@ -53,6 +66,7 @@ export async function PATCH(
         country: data.country || null,
         status: data.status,
         notes: data.notes || null,
+        logoUrl: data.logoUrl || null,
       },
     });
     return NextResponse.json({ ok: true });
