@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { actionCatch, actionErr, actionOk } from "@/components/shared/action-popup";
 import { apiJson, reloadList } from "@/lib/client-api";
 import type { Client, Project, User } from "@prisma/client";
@@ -185,12 +185,22 @@ export function NewProjectDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  clients: Pick<Client, "id" | "name">[];
+  clients: { id: string; name: string; companyName?: string | null }[];
   managers: Pick<User, "id" | "name">[];
   employees: Pick<User, "id" | "name">[];
 }) {
   const [pending, setPending] = useState(false);
   const [memberIds, setMemberIds] = useState<string[]>([]);
+  const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+
+  useEffect(() => {
+    if (!open) return;
+    if (!clientId || !clients.some((client) => client.id === clientId)) {
+      setClientId(clients[0]?.id ?? "");
+    }
+  }, [open, clients, clientId]);
+
+  const selectedClient = clients.find((client) => client.id === clientId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -234,25 +244,34 @@ export function NewProjectDialog({
             <Input name="name" required />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Client">
-              <AppSelect name="clientId" required className={selectClass}>
+            <Field label="Client Name">
+              <AppSelect
+                name="clientId"
+                required
+                className={selectClass}
+                value={clientId}
+                onChange={(event) => setClientId(event.target.value)}
+              >
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>
-                    {client.name}
+                    {client.companyName ? `${client.name} — ${client.companyName}` : client.name}
                   </option>
                 ))}
               </AppSelect>
             </Field>
-            <Field label="Manager">
-              <AppSelect name="managerId" required className={selectClass}>
-                {managers.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
-                    {manager.name}
-                  </option>
-                ))}
-              </AppSelect>
+            <Field label="Company Name">
+              <Input value={selectedClient?.companyName || "—"} readOnly />
             </Field>
           </div>
+          <Field label="Manager">
+            <AppSelect name="managerId" required className={selectClass}>
+              {managers.map((manager) => (
+                <option key={manager.id} value={manager.id}>
+                  {manager.name}
+                </option>
+              ))}
+            </AppSelect>
+          </Field>
           <Field label="Project Description">
             <Textarea name="description" rows={3} />
           </Field>

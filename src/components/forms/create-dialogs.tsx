@@ -20,7 +20,7 @@ import {
 
 type Kind = "task" | "project" | "client" | "event";
 
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; companyName?: string | null };
 
 type Options = {
   projects: Option[];

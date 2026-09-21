@@ -14,7 +14,7 @@ export async function GET() {
       }),
       prisma.client.findMany({
         orderBy: { name: "asc" },
-        select: { id: true, name: true },
+        select: { id: true, name: true, companyName: true },
       }),
       prisma.user.findMany({
         where: { status: "ACTIVE", role: { in: ["ADMIN", "MANAGER"] } },
@@ -30,7 +30,7 @@ export async function GET() {
 
     return NextResponse.json(
       { projects, clients, managers, employees },
-      { headers: { "Cache-Control": "private, max-age=60" } },
+      { headers: { "Cache-Control": "private, max-age=5" } },
     );
   } catch (error) {
     console.error("GET /api/options", error);
