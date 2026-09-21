@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Surface, SectionTitle } from "@/components/shared/surface";
 import { ClientNotes } from "./client-notes";
+import { ClientDrive } from "./client-drive";
 import { ClientDeleteButton } from "./client-delete-button";
 
 export default async function ClientDetailPage({
@@ -20,7 +21,26 @@ export default async function ClientDetailPage({
   const { id } = await params;
   const client = await prisma.client.findUnique({
     where: { id },
-    include: { projects: { include: { manager: true, tasks: true } } },
+    select: {
+      id: true,
+      name: true,
+      companyName: true,
+      email: true,
+      phone: true,
+      country: true,
+      status: true,
+      notes: true,
+      driveUrl: true,
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          manager: { select: { name: true } },
+          _count: { select: { tasks: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+      },
+    },
   });
   if (!client) notFound();
 
@@ -44,7 +64,8 @@ export default async function ClientDetailPage({
           <Meta label="Status"><StatusBadge value={client.status} /></Meta>
         </div>
       </Surface>
-      <ClientNotes client={client} />
+      <ClientDrive id={client.id} driveUrl={client.driveUrl} />
+      <ClientNotes id={client.id} notes={client.notes} />
       <section className="space-y-3">
         <SectionTitle title="Related projects" />
         {client.projects.length === 0 ? (
@@ -59,7 +80,7 @@ export default async function ClientDetailPage({
               >
                 <p className="font-semibold text-[#111827]">{project.name}</p>
                 <p className="mt-1 text-sm text-[#667085]">
-                  {project.manager.name} · {project.tasks.length} tasks
+                  {project.manager.name} · {project._count.tasks} tasks
                 </p>
               </Link>
             ))}

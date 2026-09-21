@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isValidDriveUrl } from "@/lib/drive";
 import { clientSchema } from "@/lib/validations";
 import { jsonError, requireApiStaff } from "@/lib/api-guard";
 
@@ -12,6 +13,18 @@ export async function PATCH(
     if ("error" in auth) return auth.error;
     const { id } = await params;
     const body = ((await request.json()) ?? {}) as Record<string, unknown>;
+
+    if (typeof body.driveUrl === "string" && !("name" in body)) {
+      const url = body.driveUrl.trim();
+      if (url && !isValidDriveUrl(url)) {
+        return jsonError("Enter a valid Google Drive or Docs link.");
+      }
+      await prisma.client.update({
+        where: { id },
+        data: { driveUrl: url || null },
+      });
+      return NextResponse.json({ ok: true });
+    }
 
     if (typeof body.notes === "string" && !("name" in body)) {
       await prisma.client.update({
