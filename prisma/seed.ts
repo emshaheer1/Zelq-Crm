@@ -34,7 +34,7 @@ async function main() {
     }),
     prisma.user.create({
       data: {
-        name: "Muhammad Shaheer",
+        name: "Shaheer",
         email: "shaheer",
         passwordHash: await password("webdeveloper11"),
         role: "MANAGER",
@@ -45,7 +45,7 @@ async function main() {
     }),
     prisma.user.create({
       data: {
-        name: "Muhammad Umar",
+        name: "Umar",
         email: "umar",
         passwordHash: await password("graphics"),
         role: "EMPLOYEE",

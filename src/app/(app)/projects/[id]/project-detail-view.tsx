@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, ExternalLink, MoreHorizontal } from "lucide-react";
 import type { Prisma } from "@prisma/client";
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/dates";
 import { ProjectActions } from "./project-actions";
 import { useCreateDialogs } from "@/components/forms/create-dialogs";
+import { NewProjectDialog } from "@/components/forms/entity-forms";
 import { DeleteMenuItem } from "@/components/shared/delete-menu-item";
 import { apiJson } from "@/lib/client-api";
 import {
@@ -45,7 +47,8 @@ export function ProjectDetailView({
   completed: number;
   canManage: boolean;
 }) {
-  const { open } = useCreateDialogs();
+  const { open, options, prefetch } = useCreateDialogs();
+  const [editOpen, setEditOpen] = useState(false);
   const pending = project.tasks.filter((task) => task.status !== "COMPLETED").length;
 
   return (
@@ -65,8 +68,14 @@ export function ProjectDetailView({
         </div>
         <div className="flex items-center gap-2">
           {canManage ? (
-            <Button asChild variant="secondary">
-              <Link href={`/projects/${project.id}`}>Edit Project</Link>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                prefetch();
+                setEditOpen(true);
+              }}
+            >
+              Edit Project
             </Button>
           ) : null}
           <DropdownMenu>
@@ -86,6 +95,30 @@ export function ProjectDetailView({
           </DropdownMenu>
         </div>
       </div>
+
+      {canManage ? (
+        <NewProjectDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          clients={options.clients}
+          managers={options.managers}
+          employees={options.employees}
+          project={{
+            id: project.id,
+            name: project.name,
+            clientId: project.clientId,
+            managerId: project.managerId,
+            description: project.description,
+            startDate: project.startDate,
+            deadline: project.deadline,
+            priority: project.priority,
+            status: project.status,
+            driveFolderUrl: project.driveFolderUrl,
+            notes: project.notes,
+            memberIds: project.members.map((member) => member.userId),
+          }}
+        />
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={FolderKanban} label="Progress" value={`${progress}%`} hint={`${completed} of ${project.tasks.length} tasks`} />

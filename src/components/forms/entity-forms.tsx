@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { actionCatch, actionErr, actionOk } from "@/components/shared/action-popup";
 import { apiJson, reloadList } from "@/lib/client-api";
 import { compressLogo } from "@/lib/client-logo";
+import { toDateInput } from "@/lib/dates";
 import { ClientAvatar } from "@/components/shared/user-avatar";
 import type { Client, Project, User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
@@ -184,23 +185,44 @@ export function NewProjectDialog({
   clients,
   managers,
   employees,
+  project,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clients: { id: string; name: string; companyName?: string | null }[];
   managers: Pick<User, "id" | "name">[];
   employees: Pick<User, "id" | "name">[];
+  project?: {
+    id: string;
+    name: string;
+    clientId: string;
+    managerId: string;
+    description: string | null;
+    startDate: Date | string | null;
+    deadline: Date | string | null;
+    priority: "HIGH" | "MEDIUM" | "LOW";
+    status: "NOT_STARTED" | "IN_PROGRESS" | "ON_HOLD" | "COMPLETED";
+    driveFolderUrl: string | null;
+    notes: string | null;
+    memberIds: string[];
+  };
 }) {
   const [pending, setPending] = useState(false);
-  const [memberIds, setMemberIds] = useState<string[]>([]);
-  const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+  const [memberIds, setMemberIds] = useState<string[]>(project?.memberIds ?? []);
+  const [clientId, setClientId] = useState(project?.clientId ?? clients[0]?.id ?? "");
 
   useEffect(() => {
     if (!open) return;
-    if (!clientId || !clients.some((client) => client.id === clientId)) {
-      setClientId(clients[0]?.id ?? "");
+    if (project) {
+      setClientId(project.clientId);
+      setMemberIds(project.memberIds);
+      return;
     }
-  }, [open, clients, clientId]);
+    setMemberIds([]);
+    setClientId((current) =>
+      current && clients.some((client) => client.id === current) ? current : (clients[0]?.id ?? ""),
+    );
+  }, [open, project, clients]);
 
   const selectedClient = clients.find((client) => client.id === clientId);
 
@@ -208,30 +230,38 @@ export function NewProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>New Project</DialogTitle>
+          <DialogTitle>{project ? "Edit Project" : "New Project"}</DialogTitle>
         </DialogHeader>
+        {open ? (
         <form
+          key={`${project?.id ?? "new"}-${managers.length}`}
           className="grid gap-3"
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
+            const payload = {
+              name: field(form, "name"),
+              clientId: field(form, "clientId"),
+              description: field(form, "description"),
+              managerId: field(form, "managerId"),
+              memberIds,
+              startDate: field(form, "startDate"),
+              deadline: field(form, "deadline"),
+              priority: field(form, "priority"),
+              status: field(form, "status"),
+              driveFolderUrl: field(form, "driveFolderUrl"),
+              notes: field(form, "notes"),
+            };
             void (async () => {
               setPending(true);
               try {
-                await postJson("/api/projects", {
-                  name: field(form, "name"),
-                  clientId: field(form, "clientId"),
-                  description: field(form, "description"),
-                  managerId: field(form, "managerId"),
-                  memberIds,
-                  startDate: field(form, "startDate"),
-                  deadline: field(form, "deadline"),
-                  priority: field(form, "priority"),
-                  status: field(form, "status"),
-                  driveFolderUrl: field(form, "driveFolderUrl"),
-                  notes: field(form, "notes"),
-                });
-                actionOk("Project created successfully.");
+                if (project) {
+                  await apiJson(`/api/projects/${project.id}`, { method: "PATCH", json: payload });
+                  actionOk("Project saved successfully.");
+                } else {
+                  await postJson("/api/projects", payload);
+                  actionOk("Project created successfully.");
+                }
                 onOpenChange(false);
                 reloadList();
               } catch (error) {
@@ -243,7 +273,7 @@ export function NewProjectDialog({
           }}
         >
           <Field label="Project Name">
-            <Input name="name" required />
+            <Input name="name" required defaultValue={project?.name ?? ""} />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Client Name">
@@ -266,7 +296,7 @@ export function NewProjectDialog({
             </Field>
           </div>
           <Field label="Manager">
-            <AppSelect name="managerId" required className={selectClass}>
+            <AppSelect name="managerId" required className={selectClass} defaultValue={project?.managerId}>
               {managers.map((manager) => (
                 <option key={manager.id} value={manager.id}>
                   {manager.name}
@@ -275,7 +305,7 @@ export function NewProjectDialog({
             </AppSelect>
           </Field>
           <Field label="Project Description">
-            <Textarea name="description" rows={3} />
+            <Textarea name="description" rows={3} defaultValue={project?.description ?? ""} />
           </Field>
           <Field label="Assigned Employees">
             <div className="grid gap-1.5 rounded-lg border border-border p-2">
@@ -299,22 +329,22 @@ export function NewProjectDialog({
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Start Date">
-              <DateField name="startDate" />
+              <DateField name="startDate" defaultValue={toDateInput(project?.startDate)} />
             </Field>
             <Field label="Deadline">
-              <DateField name="deadline" />
+              <DateField name="deadline" defaultValue={toDateInput(project?.deadline)} />
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Priority">
-              <AppSelect name="priority" defaultValue="MEDIUM" className={selectClass}>
+              <AppSelect name="priority" defaultValue={project?.priority ?? "MEDIUM"} className={selectClass}>
                 <option value="HIGH">High</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="LOW">Low</option>
               </AppSelect>
             </Field>
             <Field label="Status">
-              <AppSelect name="status" defaultValue="NOT_STARTED" className={selectClass}>
+              <AppSelect name="status" defaultValue={project?.status ?? "NOT_STARTED"} className={selectClass}>
                 <option value="NOT_STARTED">Not Started</option>
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="ON_HOLD">On Hold</option>
@@ -323,15 +353,16 @@ export function NewProjectDialog({
             </Field>
           </div>
           <Field label="Main Google Drive Folder Link">
-            <Input name="driveFolderUrl" placeholder="https://drive.google.com/..." />
+            <Input name="driveFolderUrl" placeholder="https://drive.google.com/..." defaultValue={project?.driveFolderUrl ?? ""} />
           </Field>
           <Field label="Notes">
-            <Textarea name="notes" rows={2} />
+            <Textarea name="notes" rows={2} defaultValue={project?.notes ?? ""} />
           </Field>
           <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Create Project"}
+            {pending ? "Saving…" : project ? "Save Project" : "Create Project"}
           </Button>
         </form>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

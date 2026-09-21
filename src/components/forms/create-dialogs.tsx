@@ -34,9 +34,11 @@ const empty: Options = { projects: [], clients: [], managers: [], employees: [] 
 const CreateDialogsContext = createContext<{
   open: (kind: Kind) => void;
   prefetch: () => void;
+  options: Options;
 }>({
   open: () => {},
   prefetch: () => {},
+  options: empty,
 });
 
 export function useCreateDialogs() {
@@ -75,7 +77,7 @@ export function CreateDialogsProvider({
     [prefetch],
   );
 
-  const value = useMemo(() => ({ open, prefetch }), [open, prefetch]);
+  const value = useMemo(() => ({ open, prefetch, options }), [open, prefetch, options]);
 
   return (
     <CreateDialogsContext.Provider value={value}>
