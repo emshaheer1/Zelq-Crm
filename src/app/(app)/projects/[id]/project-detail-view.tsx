@@ -60,7 +60,10 @@ export function ProjectDetailView({
             Projects
           </Link>
           <h1 className="text-[28px] font-semibold tracking-tight text-[#111827]">{project.name}</h1>
-          <p className="mt-1 text-sm text-[#667085]">{project.client.name}</p>
+          <p className="mt-1 text-sm text-[#667085]">
+            {project.client.name}
+            {project.client.companyName ? ` · ${project.client.companyName}` : ""}
+          </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <StatusBadge value={project.status} />
             <PriorityBadge value={project.priority} />
@@ -159,11 +162,12 @@ export function ProjectDetailView({
             <Surface>
               <SectionTitle title="Project Information" />
               <div className="space-y-4 text-sm">
-                <Info label="Client">
+                <Info label="Client Name">
                   <Link href={`/clients/${project.clientId}`} className="font-medium hover:text-[#111111]">
                     {project.client.name}
                   </Link>
                 </Info>
+                <Info label="Company Name">{project.client.companyName || "—"}</Info>
                 <Info label="Manager">{project.manager.name}</Info>
                 <Info label="Start Date">{formatDate(project.startDate)}</Info>
                 <Info label="Deadline">{formatDate(project.deadline)}</Info>

@@ -33,7 +33,7 @@ type ProjectItem = {
   status: ProjectStatus;
   priority: Priority;
   deadline: Date | null;
-  client: { id: string; name: string };
+  client: { id: string; name: string; companyName: string | null };
   members: {
     id: string;
     userId: string;
@@ -132,7 +132,10 @@ export function ProjectsWorkspace({
                   <Link href={`/projects/${project.id}`} className="block truncate text-sm font-semibold text-[#111827] hover:text-[#111111]">
                     {project.name}
                   </Link>
-                  <p className="mt-1 truncate text-[13px] text-[#667085]">{project.client.name}</p>
+                  <p className="mt-1 truncate text-[13px] text-[#667085]">
+                    {project.client.name}
+                    {project.client.companyName ? ` · ${project.client.companyName}` : ""}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1">
                   <StatusBadge value={project.status} />

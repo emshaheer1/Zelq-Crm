@@ -23,7 +23,7 @@ export default async function ProjectsPage({
         status: true,
         priority: true,
         deadline: true,
-        client: { select: { id: true, name: true } },
+        client: { select: { id: true, name: true, companyName: true } },
         members: {
           select: {
             id: true,
