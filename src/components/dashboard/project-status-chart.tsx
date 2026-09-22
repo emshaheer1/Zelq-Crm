@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CircleCheckBig, FolderKanban, PauseCircle, PlayCircle } from "lucide-react";
+import { FolderKanban } from "lucide-react";
 import { Surface, SectionTitle } from "@/components/shared/surface";
 import { EmptyState } from "@/components/shared/empty-state";
 import { UserAvatar } from "@/components/shared/user-avatar";
-import { IconBox, type IconTone } from "@/components/shared/icon-box";
 import { cn } from "@/lib/utils";
 
 export type ProjectDayPerson = {
@@ -48,21 +47,16 @@ export type ProjectStatusData = {
   projectCount: number;
 };
 
-const statusBlocks: {
-  key: keyof ProjectStatusData["status"];
-  label: string;
-  tone: IconTone;
-  Icon: typeof FolderKanban;
-}[] = [
-  { key: "notStarted", label: "Not started", tone: "muted", Icon: FolderKanban },
-  { key: "inProgress", label: "In progress", tone: "lime", Icon: PlayCircle },
-  { key: "onHold", label: "On hold", tone: "orange", Icon: PauseCircle },
-  { key: "completed", label: "Completed", tone: "green", Icon: CircleCheckBig },
+const STATUS = [
+  { key: "notStarted" as const, label: "Not started", color: "#D0D5DD" },
+  { key: "inProgress" as const, label: "In progress", color: "#B7FF00" },
+  { key: "onHold" as const, label: "On hold", color: "#F79009" },
+  { key: "completed" as const, label: "Completed", color: "#12B76A" },
 ];
 
-const DONE = "#12B76A";
+const DONE = "#101828";
 const OPEN = "#F79009";
-const GRID = "#EEF1F4";
+const GRID = "#F2F4F7";
 const AXIS = "#98A2B3";
 
 function smoothPath(points: { x: number; y: number }[]) {
@@ -87,12 +81,12 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const plot = { left: 40, right: 24, top: 28, bottom: 40, w: 760, h: 280 };
+  const plot = { left: 36, right: 16, top: 24, bottom: 36, w: 720, h: 260 };
   const innerW = plot.w - plot.left - plot.right;
   const innerH = plot.h - plot.top - plot.bottom;
-  const max = Math.max(...data.days.map((day) => Math.max(day.completed, day.open, day.total)), 1);
-  const totalProjects =
-    data.status.notStarted + data.status.inProgress + data.status.onHold + data.status.completed;
+  const max = Math.max(...data.days.map((day) => Math.max(day.completed, day.open, 1)), 1);
+
+  const totalProjects = STATUS.reduce((sum, item) => sum + data.status[item.key], 0);
   const deliveryRate =
     totalProjects === 0 ? 0 : Math.round((data.status.completed / totalProjects) * 100);
 
@@ -130,77 +124,105 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
     <Surface>
       <SectionTitle
         title="Project delivery"
-        description="Completed vs open work over the last 14 days. Hover a day to see who worked on it."
+        description="Project status overview and daily completed vs open work."
         action={
           totalProjects > 0 ? (
-            <div className="rounded-lg bg-muted/60 px-3 py-2 text-right">
-              <p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">Delivery</p>
-              <p className="text-[16px] font-semibold tabular-nums text-foreground">{deliveryRate}%</p>
-            </div>
+            <p className="text-[13px] tabular-nums text-muted-foreground">
+              <span className="font-semibold text-foreground">{deliveryRate}%</span> completed
+            </p>
           ) : null
         }
       />
 
-      <div className="mb-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        {statusBlocks.map((block, index) => (
-          <div
-            key={block.key}
-            className={cn(
-              "flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-3",
-              ready && "project-kpi-in",
-            )}
-            style={{ animationDelay: `${index * 60}ms` }}
-          >
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium text-muted-foreground">{block.label}</p>
-              <p className="mt-1 text-[22px] font-semibold leading-none tabular-nums text-foreground">
-                {String(data.status[block.key]).padStart(2, "0")}
-              </p>
-            </div>
-            <IconBox icon={block.Icon} tone={block.tone} className="size-9" iconClassName="size-4" />
-          </div>
-        ))}
-      </div>
-
       {data.projectCount === 0 ? (
         <EmptyState title="No projects yet." description="Create a project to track delivery progress." icon={FolderKanban} />
       ) : (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded-full" style={{ background: DONE }} />
-                Completed
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded-full" style={{ background: OPEN }} />
-                Open
-              </span>
+        <div className="space-y-6">
+          {/* Status strip */}
+          <div>
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4">
+              {STATUS.map((item, index) => (
+                <div
+                  key={item.key}
+                  className={cn("bg-card px-4 py-3", ready && "project-kpi-in")}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full" style={{ background: item.color }} />
+                    <p className="text-[11px] font-medium text-muted-foreground">{item.label}</p>
+                  </div>
+                  <p className="mt-2 text-[22px] font-semibold leading-none tracking-tight tabular-nums text-foreground">
+                    {String(data.status[item.key]).padStart(2, "0")}
+                  </p>
+                </div>
+              ))}
             </div>
-            <p className="text-[11px] text-muted-foreground">Last 14 days</p>
+
+            {totalProjects > 0 ? (
+              <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-muted">
+                {STATUS.map((item) => {
+                  const value = data.status[item.key];
+                  if (value === 0) return null;
+                  return (
+                    <div
+                      key={item.key}
+                      className="h-full first:rounded-l-full last:rounded-r-full motion-safe:transition-[width] motion-safe:duration-700 motion-safe:ease-out"
+                      style={{
+                        width: ready ? `${(value / totalProjects) * 100}%` : "0%",
+                        background: item.color,
+                        transitionDelay: "80ms",
+                      }}
+                      title={`${item.label}: ${value}`}
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
 
-          <div className="relative w-full rounded-xl border border-border bg-muted/30 p-2 sm:p-3">
+          {/* Chart */}
+          <div>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-[2px] w-3 rounded-full bg-foreground" />
+                  Completed
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-[2px] w-3 rounded-full bg-[#F79009]" />
+                  Open
+                </span>
+              </div>
+              <p className="text-[12px] text-muted-foreground">Last 14 days</p>
+            </div>
+
             <div className="relative w-full" style={{ aspectRatio: `${plot.w} / ${plot.h}` }}>
               <svg
                 viewBox={`0 0 ${plot.w} ${plot.h}`}
                 className="absolute inset-0 size-full"
                 role="img"
-                aria-label="Project progress curve for the last 14 days"
+                aria-label="Completed and open tasks over the last 14 days"
               >
                 <defs>
-                  <linearGradient id="project-area" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor={DONE} stopOpacity="0.16" />
-                    <stop offset="100%" stopColor={DONE} stopOpacity="0" />
+                  <linearGradient id="project-fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#B7FF00" stopOpacity="0.22" />
+                    <stop offset="100%" stopColor="#B7FF00" stopOpacity="0" />
                   </linearGradient>
                 </defs>
 
-                {[0, 0.25, 0.5, 0.75, 1].map((tick) => {
+                {[0, 0.5, 1].map((tick) => {
                   const y = plot.top + innerH - tick * innerH;
                   return (
                     <g key={tick}>
-                      <line x1={plot.left} x2={plot.w - plot.right} y1={y} y2={y} stroke={GRID} strokeWidth="1" />
-                      <text x={plot.left - 8} y={y + 3} textAnchor="end" fill={AXIS} fontSize="10">
+                      <line
+                        x1={plot.left}
+                        x2={plot.w - plot.right}
+                        y1={y}
+                        y2={y}
+                        stroke={GRID}
+                        strokeWidth="1"
+                      />
+                      <text x={plot.left - 8} y={y + 3.5} textAnchor="end" fill={AXIS} fontSize="10">
                         {Math.round(max * tick)}
                       </text>
                     </g>
@@ -215,17 +237,14 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
                     y2={plot.top + innerH}
                     stroke="#B7FF00"
                     strokeWidth="1.5"
-                    strokeDasharray="3 4"
-                    opacity="0.9"
                   />
                 ) : null}
 
                 {areaPath ? (
                   <path
                     d={areaPath}
-                    fill="url(#project-area)"
-                    className="motion-safe:transition-opacity motion-safe:duration-700"
-                    style={{ opacity: ready ? 1 : 0 }}
+                    fill="url(#project-fill)"
+                    style={{ opacity: ready ? 1 : 0, transition: "opacity 600ms ease" }}
                   />
                 ) : null}
 
@@ -233,6 +252,20 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
                   d={openPath}
                   fill="none"
                   stroke={OPEN}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  pathLength={1}
+                  style={{
+                    strokeDasharray: 1,
+                    strokeDashoffset: ready ? 0 : 1,
+                    transition: "stroke-dashoffset 850ms cubic-bezier(0.22,1,0.36,1)",
+                  }}
+                />
+                <path
+                  d={completedPath}
+                  fill="none"
+                  stroke={DONE}
                   strokeWidth="2.25"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -240,46 +273,19 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
                   style={{
                     strokeDasharray: 1,
                     strokeDashoffset: ready ? 0 : 1,
-                    transition: "stroke-dashoffset 900ms cubic-bezier(0.22,1,0.36,1)",
-                  }}
-                />
-                <path
-                  d={completedPath}
-                  fill="none"
-                  stroke={DONE}
-                  strokeWidth="2.75"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  pathLength={1}
-                  style={{
-                    strokeDasharray: 1,
-                    strokeDashoffset: ready ? 0 : 1,
-                    transition: "stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1) 60ms",
+                    transition: "stroke-dashoffset 950ms cubic-bezier(0.22,1,0.36,1) 40ms",
                   }}
                 />
 
-                {openPoints.map((point, index) =>
-                  point.day.people.length === 0 ? (
-                    <circle
-                      key={`open-dot-${point.day.key}`}
-                      cx={point.x}
-                      cy={point.y}
-                      r={ready ? 3.5 : 0}
-                      fill="#fff"
-                      stroke={OPEN}
-                      strokeWidth="2"
-                      style={{ transition: `r 400ms ease ${160 + index * 28}ms` }}
-                    />
-                  ) : null,
-                )}
-
-                {completedPoints.map((point, index) =>
-                  point.day.people.length === 0 ? (
-                    <g key={`done-dot-${point.day.key}`}>
+                {completedPoints.map((point, index) => {
+                  const isActive = active === point.day.key;
+                  const openY = openPoints[index]?.y ?? point.y;
+                  return (
+                    <g key={point.day.key}>
                       <circle
                         cx={point.x}
-                        cy={point.y}
-                        r={18}
+                        cy={(point.y + openY) / 2}
+                        r={22}
                         fill="transparent"
                         className="cursor-pointer"
                         onMouseEnter={() => setActive(point.day.key)}
@@ -287,150 +293,119 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
                       />
                       <circle
                         cx={point.x}
+                        cy={openY}
+                        r={ready ? (isActive ? 4 : 3) : 0}
+                        fill="#fff"
+                        stroke={OPEN}
+                        strokeWidth="1.75"
+                        style={{ transition: `r 280ms ease ${140 + index * 24}ms` }}
+                        pointerEvents="none"
+                      />
+                      <circle
+                        cx={point.x}
                         cy={point.y}
-                        r={ready ? (active === point.day.key ? 5 : 4) : 0}
+                        r={ready ? (isActive ? 5 : 3.5) : 0}
                         fill="#fff"
                         stroke={DONE}
-                        strokeWidth="2.25"
-                        style={{ transition: `r 280ms ease ${200 + index * 28}ms` }}
+                        strokeWidth="2"
+                        style={{ transition: `r 280ms ease ${160 + index * 24}ms` }}
+                        pointerEvents="none"
                       />
-                    </g>
-                  ) : null,
-                )}
-
-                {completedPoints.map((point, index) =>
-                  index === 0 || index === completedPoints.length - 1 || index % 2 === 0 ? (
-                    <text
-                      key={`label-${point.day.key}`}
-                      x={point.x}
-                      y={plot.h - 12}
-                      textAnchor="middle"
-                      fill={AXIS}
-                      fontSize="10"
-                      fontWeight="500"
-                    >
-                      {point.day.label}
-                    </text>
-                  ) : null,
-                )}
-              </svg>
-
-              <div className="pointer-events-none absolute inset-0">
-                {completedPoints.map((point, index) => {
-                  if (point.day.people.length === 0) return null;
-                  const isActive = active === point.day.key;
-                  const lead = point.day.people[0]!;
-                  const extra = point.day.people.length - 1;
-                  return (
-                    <button
-                      key={`avatar-${point.day.key}`}
-                      type="button"
-                      title={point.day.people.map((person) => person.name).join(", ")}
-                      onMouseEnter={() => setActive(point.day.key)}
-                      onMouseLeave={() => setActive(null)}
-                      onFocus={() => setActive(point.day.key)}
-                      onBlur={() => setActive(null)}
-                      className={cn(
-                        "pointer-events-auto absolute flex items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                        ready && "project-mark-in",
-                        isActive && "z-20",
+                      {(index === 0 ||
+                        index === completedPoints.length - 1 ||
+                        index % 3 === 0 ||
+                        isActive) && (
+                        <text
+                          x={point.x}
+                          y={plot.h - 10}
+                          textAnchor="middle"
+                          fill={isActive ? DONE : AXIS}
+                          fontSize="10"
+                          fontWeight={isActive ? 600 : 500}
+                        >
+                          {point.day.label}
+                        </text>
                       )}
-                      style={{
-                        left: `${(point.x / plot.w) * 100}%`,
-                        top: `${(point.y / plot.h) * 100}%`,
-                        animationDelay: `${220 + index * 40}ms`,
-                        transform: isActive
-                          ? "translate(-50%, -50%) scale(1.1)"
-                          : "translate(-50%, -50%) scale(1)",
-                        transition: "transform 200ms ease",
-                      }}
-                    >
-                      <span
-                        className={cn(
-                          "relative rounded-full bg-card p-[2px] shadow-sm ring-2 ring-offset-1 ring-offset-background",
-                          lead.done ? "ring-[#12B76A]" : "ring-[#F79009]",
-                          isActive && "ring-primary",
-                        )}
-                      >
-                        <UserAvatar name={lead.name} src={lead.avatarUrl} className="size-7" />
-                        {extra > 0 ? (
-                          <span className="absolute -right-1 -bottom-1 grid size-4 place-items-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground ring-2 ring-card">
-                            +{extra}
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
+                    </g>
                   );
                 })}
-              </div>
+              </svg>
             </div>
           </div>
 
+          {/* Day detail */}
           {activeDay ? (
-            <div
-              key={activeDay.key}
-              className="project-panel-in overflow-hidden rounded-xl border border-border bg-card"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-3">
+            <div key={activeDay.key} className="project-panel-in border-t border-border pt-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-muted-foreground">{activeDay.dateLabel}</p>
-                  <p className="mt-0.5 text-[13px] font-semibold text-foreground">
-                    {activeDay.total} task{activeDay.total === 1 ? "" : "s"} this day
+                  <p className="text-[13px] font-semibold text-foreground">{activeDay.dateLabel}</p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
+                    <span className="text-[#12B76A]">{activeDay.completed} completed</span>
+                    {" · "}
+                    <span className="text-[#F79009]">{activeDay.open} open</span>
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {activeDay.people.slice(0, 4).map((person) => (
-                    <UserAvatar
-                      key={person.id}
-                      name={person.name}
-                      src={person.avatarUrl}
-                      className="size-7 border-2 border-card"
-                    />
-                  ))}
-                  <div className="ml-1 flex gap-1.5">
-                    <span className="rounded-md bg-[#ECFDF3] px-2 py-1 text-[11px] font-semibold tabular-nums text-[#027A48]">
-                      {activeDay.completed} done
-                    </span>
-                    <span className="rounded-md bg-[#FFFAEB] px-2 py-1 text-[11px] font-semibold tabular-nums text-[#B54708]">
-                      {activeDay.open} open
-                    </span>
+                {activeDay.people.length > 0 ? (
+                  <div className="flex items-center -space-x-2">
+                    {activeDay.people.slice(0, 5).map((person) => (
+                      <UserAvatar
+                        key={person.id}
+                        name={person.name}
+                        src={person.avatarUrl}
+                        className="size-8 border-2 border-card"
+                      />
+                    ))}
+                    {activeDay.people.length > 5 ? (
+                      <span className="grid size-8 place-items-center rounded-full border-2 border-card bg-muted text-[10px] font-semibold text-muted-foreground">
+                        +{activeDay.people.length - 5}
+                      </span>
+                    ) : null}
                   </div>
-                </div>
+                ) : null}
               </div>
 
               {activeDay.tasks.length === 0 ? (
-                <p className="px-4 py-4 text-[13px] text-muted-foreground">No tasks tied to this day yet.</p>
+                <p className="text-[13px] text-muted-foreground">No tasks on this day.</p>
               ) : (
-                <div className="divide-y divide-border sm:grid sm:grid-cols-2 sm:divide-y-0">
-                  {activeDay.tasks.map((task, index) => (
-                    <Link
-                      key={task.id}
-                      href={`/tasks/${task.id}`}
-                      className={cn(
-                        "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted/50",
-                        index % 2 === 0 && "sm:border-r sm:border-border",
-                        index < 2 && activeDay.tasks.length > 2 && "sm:border-b sm:border-border",
-                      )}
-                    >
-                      <UserAvatar
-                        name={task.assignee.name}
-                        src={task.assignee.avatarUrl}
-                        className="mt-0.5 size-8 shrink-0"
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-medium text-foreground">{task.title}</span>
-                        <span className="mt-0.5 block truncate text-[12px] text-muted-foreground">
-                          {task.assignee.name} · {task.project}
+                <ul className="divide-y divide-border rounded-lg border border-border">
+                  {activeDay.tasks.map((task) => (
+                    <li key={task.id}>
+                      <Link
+                        href={`/tasks/${task.id}`}
+                        className="flex items-center gap-3 px-3.5 py-2.5 transition-colors hover:bg-muted/50"
+                      >
+                        <UserAvatar
+                          name={task.assignee.name}
+                          src={task.assignee.avatarUrl}
+                          className="size-7 shrink-0"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[13px] font-medium text-foreground">
+                            {task.title}
+                          </span>
+                          <span className="block truncate text-[12px] text-muted-foreground">
+                            {task.assignee.name} · {task.project}
+                          </span>
                         </span>
-                      </span>
-                    </Link>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium",
+                            task.status === "COMPLETED"
+                              ? "bg-[#ECFDF3] text-[#027A48]"
+                              : "bg-[#FFFAEB] text-[#B54708]",
+                          )}
+                        >
+                          {task.status === "COMPLETED" ? "Done" : "Open"}
+                        </span>
+                      </Link>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </div>
           ) : (
-            <p className="text-center text-[12px] text-muted-foreground">
-              Hover a point or avatar on the chart to inspect that day
+            <p className="border-t border-border pt-4 text-center text-[12px] text-muted-foreground">
+              Hover a day on the chart to see tasks and people
             </p>
           )}
         </div>
