@@ -312,6 +312,32 @@ a {
   animation: project-panel-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes work-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.work-row-in {
+  animation: work-row-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes work-panel-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.work-panel-in {
+  animation: work-panel-in 0.25s ease both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *:not(.login-motion),
   *:not(.login-motion)::before,
