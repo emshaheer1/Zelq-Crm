@@ -45,7 +45,7 @@ export function WorkChart({ rows }: { rows: EmployeeWork[] }) {
     <Surface>
       <SectionTitle
         title="Team work"
-        description="Who has finished work this month, and who still has pending tasks."
+        description="Who has finished work this month, and who still has pending tasks. Managers also get credit for tasks they assign."
       />
       {rows.length === 0 ? (
         <EmptyState title="No employee work yet." icon={UsersRound} />

@@ -108,16 +108,18 @@ export async function getTeamWorkload() {
     select: {
       id: true,
       name: true,
+      role: true,
       designation: true,
       avatarUrl: true,
-      assignedTasks: { select: { status: true, completedAt: true, deadline: true } },
+      assignedTasks: { select: { id: true, status: true, completedAt: true, deadline: true } },
+      createdTasks: { select: { id: true, status: true, completedAt: true, deadline: true } },
     },
   });
 
   const month = monthRange(new Date().getFullYear(), new Date().getMonth() + 1);
 
   return users.map((user) => {
-    const tasks = user.assignedTasks;
+    const tasks = workloadTasks(user);
     return {
       id: user.id,
       name: user.name,
@@ -142,6 +144,27 @@ export async function getTeamWorkload() {
       ).length,
     };
   });
+}
+
+type WorkloadTask = {
+  id: string;
+  status: string;
+  completedAt: Date | null;
+  deadline: Date | null;
+};
+
+/** Managers get credit for tasks they assign; employees for tasks assigned to them. */
+function workloadTasks(user: {
+  role: string;
+  assignedTasks: WorkloadTask[];
+  createdTasks: WorkloadTask[];
+}) {
+  if (user.role === "MANAGER" || user.role === "ADMIN") {
+    const map = new Map(user.createdTasks.map((task) => [task.id, task]));
+    for (const task of user.assignedTasks) map.set(task.id, task);
+    return [...map.values()];
+  }
+  return user.assignedTasks;
 }
 
 export async function getUpcomingWork(user: AuthUser) {

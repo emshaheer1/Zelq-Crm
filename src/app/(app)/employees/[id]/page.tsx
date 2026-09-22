@@ -47,12 +47,27 @@ export default async function EmployeeProfilePage({
         include: { project: true, assignedTo: true },
         orderBy: { createdAt: "desc" },
       },
+      createdTasks: {
+        include: { project: true, assignedTo: true },
+        orderBy: { createdAt: "desc" },
+      },
       projectMemberships: { include: { project: true } },
     },
   });
   if (!employee) notFound();
 
-  const monthTasks = employee.assignedTasks.filter(
+  const workTasks =
+    employee.role === "MANAGER" || employee.role === "ADMIN"
+      ? (() => {
+          const map = new Map(employee.createdTasks.map((task) => [task.id, task]));
+          for (const task of employee.assignedTasks) map.set(task.id, task);
+          return [...map.values()].sort(
+            (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+          );
+        })()
+      : employee.assignedTasks;
+
+  const monthTasks = workTasks.filter(
     (task) =>
       (task.createdAt >= range.start && task.createdAt <= range.end) ||
       (task.deadline && task.deadline >= range.start && task.deadline <= range.end) ||
@@ -63,8 +78,8 @@ export default async function EmployeeProfilePage({
   const overdue = monthTasks.filter(
     (task) => task.status !== "COMPLETED" && task.deadline && task.deadline < startOfToday(),
   ).length;
-  const currentTasks = employee.assignedTasks.filter((task) => task.status !== "COMPLETED");
-  const completedTasks = employee.assignedTasks.filter((task) => task.status === "COMPLETED");
+  const currentTasks = workTasks.filter((task) => task.status !== "COMPLETED");
+  const completedTasks = workTasks.filter((task) => task.status === "COMPLETED");
 
   return (
     <div className="space-y-6">

@@ -45,12 +45,33 @@ export default async function ReportsPage({
 
   const selectedEmployee = employees.find((employee) => employee.id === query.employee) ?? employees[0];
   const selectedProject = projects.find((project) => project.id === query.project) ?? projects[0];
-  const employeeTasks = monthTasks.filter((task) => task.assignedToId === selectedEmployee?.id);
+  const employeeTasks = monthTasks.filter((task) => {
+    if (!selectedEmployee) return false;
+    if (selectedEmployee.role === "MANAGER" || selectedEmployee.role === "ADMIN") {
+      return task.assignedById === selectedEmployee.id || task.assignedToId === selectedEmployee.id;
+    }
+    return task.assignedToId === selectedEmployee.id;
+  });
   const companyCompleted = monthTasks.filter((task) => task.status === "COMPLETED").length;
   const companyPending = monthTasks.filter((task) => task.status !== "COMPLETED").length;
   const companyOverdue = monthTasks.filter(
     (task) => task.status !== "COMPLETED" && task.deadline && task.deadline < startOfToday(),
   ).length;
+
+  const companyEmployees = employees.map((employee) => {
+    const tasks = monthTasks.filter((task) => {
+      if (employee.role === "MANAGER" || employee.role === "ADMIN") {
+        return task.assignedById === employee.id || task.assignedToId === employee.id;
+      }
+      return task.assignedToId === employee.id;
+    });
+    return {
+      id: employee.id,
+      name: employee.name,
+      completed: tasks.filter((task) => task.status === "COMPLETED").length,
+      assigned: tasks.length,
+    };
+  });
 
   return (
     <ReportsWorkspace
@@ -115,14 +136,7 @@ export default async function ReportsPage({
           ["NOT_STARTED", "IN_PROGRESS"].includes(project.status),
         ).length,
         completedProjects: allProjects.filter((project) => project.status === "COMPLETED").length,
-        employees: employees.map((employee) => ({
-          id: employee.id,
-          name: employee.name,
-          completed: monthTasks.filter(
-            (task) => task.assignedToId === employee.id && task.status === "COMPLETED",
-          ).length,
-          assigned: monthTasks.filter((task) => task.assignedToId === employee.id).length,
-        })),
+        employees: companyEmployees,
       }}
     />
   );
