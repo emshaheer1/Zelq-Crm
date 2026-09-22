@@ -3,6 +3,7 @@
 import {
   Children,
   isValidElement,
+  useEffect,
   useMemo,
   useState,
   type ReactElement,
@@ -61,6 +62,13 @@ export function AppSelect({
   const [uncontrolled, setUncontrolled] = useState(initial);
   const current = value !== undefined ? String(value) : uncontrolled;
 
+  useEffect(() => {
+    if (value !== undefined) return;
+    if (options.length === 0) return;
+    if (options.some((option) => option.value === uncontrolled)) return;
+    setUncontrolled(String(options[0]?.value ?? ""));
+  }, [options, uncontrolled, value]);
+
   function commit(next: string) {
     const resolved = next === EMPTY ? "" : next;
     if (value === undefined) setUncontrolled(resolved);
@@ -74,9 +82,9 @@ export function AppSelect({
       {name ? <input type="hidden" name={name} value={current} required={required} /> : null}
       <Select value={current === "" ? EMPTY : current} onValueChange={commit} disabled={disabled}>
         <SelectTrigger id={id} className={cn("h-9 w-full min-w-0 text-[13px]", className)}>
-          <SelectValue />
+          <SelectValue placeholder="Select…" />
         </SelectTrigger>
-        <SelectContent position="popper" align="start">
+        <SelectContent position="popper" align="start" className="z-[120]">
           {options.map((option, index) => (
             <SelectItem
               key={`${option.value}-${index}`}

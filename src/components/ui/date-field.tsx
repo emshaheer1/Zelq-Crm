@@ -70,7 +70,7 @@ export function DateField({
         <PopoverContent
           align="start"
           sideOffset={6}
-          className="z-[70] w-[292px] overflow-hidden rounded-2xl border border-[#EAECF0] bg-white p-0 shadow-[0_16px_40px_rgba(16,24,40,0.12)]"
+          className="z-[120] w-[292px] overflow-hidden rounded-2xl border border-[#EAECF0] bg-white p-0 shadow-[0_16px_40px_rgba(16,24,40,0.12)]"
         >
           <div className="flex items-center justify-between bg-[#111111] px-3.5 py-2.5">
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#B7FF00]">

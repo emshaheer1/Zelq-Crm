@@ -358,9 +358,14 @@ export function NewProjectDialog({
           <Field label="Notes">
             <Textarea name="notes" rows={2} defaultValue={project?.notes ?? ""} />
           </Field>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : project ? "Save Project" : "Create Project"}
-          </Button>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Saving…" : project ? "Save Project" : "Create Project"}
+            </Button>
+          </div>
         </form>
         ) : null}
       </DialogContent>
@@ -463,11 +468,17 @@ export function NewClientDialog({
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>
           ) : null}
           <Field label="Client Logo">
-            <div className="flex items-center gap-3">
-              <ClientAvatar name="Client logo" src={logoUrl || null} className="size-12" />
-              <label className="inline-flex">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-[#F9FAFB] px-3 py-2.5">
+              <ClientAvatar name="Client logo" src={logoUrl || null} className="size-10" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-medium text-[#111827]">
+                  {logoUrl ? "Logo selected" : "Optional logo"}
+                </p>
+                <p className="text-[12px] text-[#667085]">PNG or JPG, shown on the client profile</p>
+              </div>
+              <label className="inline-flex shrink-0">
                 <span className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-border bg-white px-3 text-[13px] font-medium text-foreground hover:bg-muted">
-                  {logoUrl ? "Change logo" : "Upload logo"}
+                  {logoUrl ? "Change" : "Upload"}
                 </span>
                 <input
                   type="file"
@@ -515,9 +526,14 @@ export function NewClientDialog({
           <Field label="Notes">
             <Textarea name="notes" rows={3} />
           </Field>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Create Client"}
-          </Button>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={() => close(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Saving…" : "Create Client"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -651,9 +667,14 @@ export function NewEventDialog({
           <Field label="Description">
             <Textarea name="description" rows={3} />
           </Field>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Create Event"}
-          </Button>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Saving…" : "Create Event"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

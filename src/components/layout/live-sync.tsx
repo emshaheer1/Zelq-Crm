@@ -38,8 +38,11 @@ export function LiveSync({ onData }: Props) {
     signatureRef.current = signature;
     onDataRef.current({ unread, notifications: list });
 
-    if (opts?.forcePageRefresh || changed) {
+    if (opts?.forcePageRefresh) {
       router.refresh();
+    } else if (changed) {
+      const dialogOpen = Boolean(document.querySelector('[data-slot="dialog-content"]'));
+      if (!dialogOpen) router.refresh();
     }
   }, [router]);
 
