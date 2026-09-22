@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { actionAsk, actionCatch, actionOk } from "@/components/shared/action-popup";
-import { reloadList } from "@/lib/client-api";
+import { reloadList, softRefresh } from "@/lib/client-api";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
@@ -22,8 +22,12 @@ async function runDelete({
   if (!ok) return;
   await onDelete();
   actionOk(`${label[0]!.toUpperCase()}${label.slice(1)} deleted successfully.`);
-  if (redirectTo) window.setTimeout(() => router.push(redirectTo), 2200);
-  else reloadList();
+  if (redirectTo) {
+    softRefresh();
+    window.setTimeout(() => router.push(redirectTo), 1200);
+  } else {
+    reloadList();
+  }
 }
 
 export function DeleteMenuItem({

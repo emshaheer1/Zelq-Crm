@@ -18,8 +18,20 @@ export async function apiJson<T = { ok?: boolean; id?: string; error?: string }>
   return result;
 }
 
+/** Soft-refresh the current page (no full browser reload). */
+export function softRefresh() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("zelq:refresh"));
+}
+
+/** Ask the shell to reload the notification bell immediately. */
+export function refreshNotifications() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("zelq:notifications"));
+}
+
+/** After a mutation: refresh notifications + soft-refresh the page. */
 export function reloadList() {
-  window.setTimeout(() => {
-    window.location.replace(window.location.pathname);
-  }, 2200);
+  refreshNotifications();
+  softRefresh();
 }

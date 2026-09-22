@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { apiJson } from "@/lib/client-api";
+import { apiJson, softRefresh, refreshNotifications } from "@/lib/client-api";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
 
 export function MarkAllButton() {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   return (
     <Button
@@ -16,7 +18,9 @@ export function MarkAllButton() {
         try {
           await apiJson("/api/notifications", { method: "PATCH", json: { all: true } });
           actionOk("Notifications marked as read.");
-          window.location.replace("/notifications");
+          refreshNotifications();
+          softRefresh();
+          router.refresh();
         } catch (error) {
           actionCatch(error);
         } finally {

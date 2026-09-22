@@ -58,6 +58,8 @@ export function TopBar({
   user,
   unread,
   notifications,
+  onUnreadChange,
+  onNotificationsChange,
 }: {
   user: {
     id: string;
@@ -76,6 +78,17 @@ export function TopBar({
     read: boolean;
     createdAt?: Date | string;
   }[];
+  onUnreadChange?: (unread: number) => void;
+  onNotificationsChange?: (
+    notifications: {
+      id: string;
+      title: string;
+      body: string | null;
+      href: string | null;
+      read: boolean;
+      createdAt?: Date | string;
+    }[],
+  ) => void;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -198,7 +211,17 @@ export function TopBar({
               <div className="flex items-center justify-between px-2 py-1.5">
                 <p className="text-xs font-semibold text-muted-foreground">Notifications</p>
                 {unread > 0 ? (
-                  <button className="text-xs font-medium text-foreground" onClick={() => apiJson("/api/notifications", { method: "PATCH", json: { all: true } })}>
+                  <button
+                    className="text-xs font-medium text-foreground"
+                    onClick={() => {
+                      void apiJson("/api/notifications", { method: "PATCH", json: { all: true } })
+                        .then(() => {
+                          onUnreadChange?.(0);
+                          onNotificationsChange?.(notifications.map((item) => ({ ...item, read: true })));
+                        })
+                        .catch(() => {});
+                    }}
+                  >
                     Mark all as read
                   </button>
                 ) : null}
@@ -212,6 +235,14 @@ export function TopBar({
                     className="items-start gap-3 py-2.5"
                     onClick={async () => {
                       await apiJson("/api/notifications", { method: "PATCH", json: { id: item.id } }).catch(() => {});
+                      if (!item.read) {
+                        onUnreadChange?.(Math.max(0, unread - 1));
+                        onNotificationsChange?.(
+                          notifications.map((notice) =>
+                            notice.id === item.id ? { ...notice, read: true } : notice,
+                          ),
+                        );
+                      }
                       if (item.href) router.push(item.href);
                     }}
                   >

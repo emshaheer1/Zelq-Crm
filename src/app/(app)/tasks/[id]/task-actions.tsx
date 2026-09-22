@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
-import { apiJson } from "@/lib/client-api";
+import { apiJson, softRefresh, refreshNotifications } from "@/lib/client-api";
 import { Eye, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,15 @@ export function TaskActions({
       if (nextStatus) setStatus(nextStatus);
       if (body && "action" in body && (body as { action?: string }).action === "comment") {
         setComment("");
+      }
+      if (body && "action" in body) {
+        const action = (body as { action?: string }).action;
+        if (action === "submit" || action === "approve" || action === "revision" || action === "drive") {
+          refreshNotifications();
+          softRefresh();
+        } else if (action === "comment" || action === "start") {
+          softRefresh();
+        }
       }
     } catch (error) {
       actionCatch(error);

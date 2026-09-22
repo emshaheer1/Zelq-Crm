@@ -25,7 +25,10 @@ export async function GET() {
         })
         .catch(() => []),
     ]);
-    return NextResponse.json({ unread, notifications });
+    return NextResponse.json(
+      { unread, notifications },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     console.error("GET /api/notifications", error);
     return jsonError("Could not load notifications.", 500);
