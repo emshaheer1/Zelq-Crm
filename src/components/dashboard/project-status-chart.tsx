@@ -54,20 +54,6 @@ const STATUS = [
   { key: "completed" as const, label: "Completed", color: "#12B76A" },
 ];
 
-function polar(cx: number, cy: number, r: number, angle: number) {
-  const rad = ((angle - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-function arcPath(cx: number, cy: number, r: number, start: number, end: number) {
-  const sweep = end - start;
-  if (sweep <= 0) return "";
-  const large = sweep > 180 ? 1 : 0;
-  const from = polar(cx, cy, r, start);
-  const to = polar(cx, cy, r, end);
-  return `M ${from.x} ${from.y} A ${r} ${r} 0 ${large} 1 ${to.x} ${to.y}`;
-}
-
 export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState<string | null>(null);
@@ -78,21 +64,19 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
   }, []);
 
   const totalProjects = STATUS.reduce((sum, item) => sum + data.status[item.key], 0);
-  const deliveryRate =
-    totalProjects === 0 ? 0 : Math.round((data.status.completed / totalProjects) * 100);
+  const completedProjects = data.status.completed;
+  const completedRate =
+    totalProjects === 0 ? 0 : Math.round((completedProjects / totalProjects) * 100);
 
-  const arcs = useMemo(() => {
-    let angle = 0;
-    const gap = totalProjects > 1 ? 3 : 0;
-    return STATUS.map((item) => {
-      const value = data.status[item.key];
-      const slice = totalProjects === 0 ? 0 : (value / totalProjects) * (360 - gap * STATUS.filter((s) => data.status[s.key] > 0).length);
-      const start = angle;
-      const end = angle + slice;
-      angle = end + (value > 0 ? gap : 0);
-      return { ...item, value, start, end };
-    }).filter((item) => item.value > 0);
-  }, [data.status, totalProjects]);
+  const dayTotals = useMemo(() => {
+    return data.days.reduce(
+      (acc, day) => ({
+        completed: acc.completed + day.completed,
+        open: acc.open + day.open,
+      }),
+      { completed: 0, open: 0 },
+    );
+  }, [data.days]);
 
   const maxDay = Math.max(...data.days.map((day) => day.total), 1);
   const activeDay = data.days.find((day) => day.key === active) ?? null;
@@ -101,48 +85,54 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
     [data.days],
   );
 
+  const radius = 58;
+  const ring = 2 * Math.PI * radius;
+
   return (
     <Surface>
       <SectionTitle
         title="Project delivery"
-        description="Project pipeline and the last 14 days of completed vs open work."
+        description="Project completion rate on the left. Task activity for the last 14 days on the right."
       />
 
       {data.projectCount === 0 ? (
         <EmptyState title="No projects yet." description="Create a project to track delivery progress." icon={FolderKanban} />
       ) : (
         <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)] lg:items-start">
-          {/* Status donut */}
+          {/* Project completion ring — % matches the green arc */}
           <div className="flex flex-col items-center">
             <div className="relative size-[168px]">
-              <svg viewBox="0 0 168 168" className="size-full">
-                <circle cx="84" cy="84" r="58" fill="none" stroke="#EEF1F4" strokeWidth="14" />
-                {arcs.map((item, index) => (
-                  <path
-                    key={item.key}
-                    d={arcPath(84, 84, 58, item.start, item.end)}
-                    fill="none"
-                    stroke={item.color}
-                    strokeWidth="14"
-                    strokeLinecap="butt"
-                    pathLength={1}
-                    style={{
-                      strokeDasharray: 1,
-                      strokeDashoffset: ready ? 0 : 1,
-                      transition: `stroke-dashoffset 700ms cubic-bezier(0.22,1,0.36,1) ${index * 80}ms`,
-                    }}
-                  />
-                ))}
+              <svg viewBox="0 0 168 168" className="size-full -rotate-90">
+                <circle cx="84" cy="84" r={radius} fill="none" stroke="#EEF1F4" strokeWidth="14" />
+                <circle
+                  cx="84"
+                  cy="84"
+                  r={radius}
+                  fill="none"
+                  stroke="#12B76A"
+                  strokeWidth="14"
+                  strokeLinecap="round"
+                  strokeDasharray={ring}
+                  strokeDashoffset={ready ? ring * (1 - completedRate / 100) : ring}
+                  className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700 motion-safe:ease-out"
+                />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <p className="text-[28px] font-semibold leading-none tabular-nums text-foreground">
-                  {deliveryRate}%
+                  {completedRate}%
                 </p>
-                <p className="mt-1 text-[11px] font-medium text-muted-foreground">Delivered</p>
+                <p className="mt-1 text-[11px] font-medium text-muted-foreground">Completed</p>
               </div>
             </div>
 
-            <div className="mt-5 grid w-full gap-1.5">
+            <p className="mt-3 text-center text-[12px] text-muted-foreground">
+              <span className="font-semibold tabular-nums text-foreground">{completedProjects}</span>
+              {" of "}
+              <span className="font-semibold tabular-nums text-foreground">{totalProjects}</span>
+              {" projects"}
+            </p>
+
+            <div className="mt-4 grid w-full gap-1.5">
               {STATUS.map((item) => (
                 <div
                   key={item.key}
@@ -160,18 +150,26 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
             </div>
           </div>
 
-          {/* 14-day activity board */}
+          {/* 14-day task activity */}
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[12px] font-medium text-foreground">Daily activity</p>
+              <div>
+                <p className="text-[12px] font-medium text-foreground">Task activity</p>
+                <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
+                  <span className="text-[#12B76A]">{dayTotals.completed} done</span>
+                  {" · "}
+                  <span className="text-[#F79009]">{dayTotals.open} open</span>
+                  {" · last 14 days"}
+                </p>
+              </div>
               <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="size-2 rounded-sm bg-[#12B76A]" />
-                  Completed
+                  Tasks done
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="size-2 rounded-sm bg-[#F79009]" />
-                  Open
+                  Tasks open
                 </span>
               </div>
             </div>
@@ -256,9 +254,9 @@ export function ProjectStatusChart({ data }: { data: ProjectStatusData }) {
                   <div>
                     <p className="text-[13px] font-semibold text-foreground">{activeDay.dateLabel}</p>
                     <p className="mt-0.5 text-[12px] text-muted-foreground">
-                      <span className="text-[#12B76A]">{activeDay.completed} done</span>
+                      <span className="text-[#12B76A]">{activeDay.completed} tasks done</span>
                       {" · "}
-                      <span className="text-[#F79009]">{activeDay.open} open</span>
+                      <span className="text-[#F79009]">{activeDay.open} tasks open</span>
                     </p>
                   </div>
                   {busiest?.key === activeDay.key && activeDay.total > 0 ? (

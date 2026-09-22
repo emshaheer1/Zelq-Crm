@@ -385,12 +385,25 @@ export async function getProjectStatusChart(user: AuthUser) {
   const days = Array.from({ length: 14 }, (_, index) => {
     const date = addDays(from, index);
     const dayKey = format(date, "yyyy-MM-dd");
-    const dayTasks = tasks.filter((task) => {
-      const stamp = task.completedAt ?? task.deadline ?? task.createdAt;
+
+    // Completed tasks belong to the day they were finished.
+    const completedTasks = tasks.filter(
+      (task) =>
+        task.status === "COMPLETED" &&
+        task.completedAt != null &&
+        format(task.completedAt, "yyyy-MM-dd") === dayKey,
+    );
+
+    // Open tasks belong to the day of their deadline (or created date if none).
+    const openTasks = tasks.filter((task) => {
+      if (task.status === "COMPLETED") return false;
+      const stamp = task.deadline ?? task.createdAt;
       return format(stamp, "yyyy-MM-dd") === dayKey;
     });
-    const completed = dayTasks.filter((task) => task.status === "COMPLETED").length;
-    const open = dayTasks.filter((task) => task.status !== "COMPLETED").length;
+
+    const dayTasks = [...completedTasks, ...openTasks];
+    const completed = completedTasks.length;
+    const open = openTasks.length;
     const peopleMap = new Map<string, { id: string; name: string; avatarUrl: string | null; done: boolean }>();
     for (const task of dayTasks) {
       const person = task.assignedTo;
