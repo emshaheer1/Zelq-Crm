@@ -1,4 +1,4 @@
-import { addDays } from "date-fns";
+import { addDays, format } from "date-fns";
 import { Prisma, TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { endOfToday, endOfTomorrow, monthRange, startOfToday, startOfTomorrow } from "@/lib/dates";
@@ -339,4 +339,72 @@ export async function getWorkByClient(user: AuthUser) {
   }
 
   return [...map.values()].sort((a, b) => b.assigned - a.assigned).slice(0, 6);
+}
+
+export async function getProjectStatusChart(user: AuthUser) {
+  const [projectWhere, taskWhere] = await Promise.all([projectScope(user), taskScope(user)]);
+  const today = startOfToday();
+  const from = addDays(today, -13);
+  const to = endOfToday();
+
+  const [projects, tasks] = await Promise.all([
+    prisma.project.findMany({
+      where: projectWhere,
+      select: { id: true, name: true, status: true },
+    }),
+    prisma.task.findMany({
+      where: {
+        ...taskWhere,
+        OR: [
+          { deadline: { gte: from, lte: to } },
+          { completedAt: { gte: from, lte: to } },
+          { createdAt: { gte: from, lte: to } },
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        deadline: true,
+        completedAt: true,
+        createdAt: true,
+        project: { select: { id: true, name: true } },
+      },
+      orderBy: { deadline: "asc" },
+    }),
+  ]);
+
+  const status = {
+    notStarted: projects.filter((project) => project.status === "NOT_STARTED").length,
+    inProgress: projects.filter((project) => project.status === "IN_PROGRESS").length,
+    onHold: projects.filter((project) => project.status === "ON_HOLD").length,
+    completed: projects.filter((project) => project.status === "COMPLETED").length,
+  };
+
+  const days = Array.from({ length: 14 }, (_, index) => {
+    const date = addDays(from, index);
+    const dayKey = format(date, "yyyy-MM-dd");
+    const dayTasks = tasks.filter((task) => {
+      const stamp = task.completedAt ?? task.deadline ?? task.createdAt;
+      return format(stamp, "yyyy-MM-dd") === dayKey;
+    });
+    const completed = dayTasks.filter((task) => task.status === "COMPLETED").length;
+    const open = dayTasks.filter((task) => task.status !== "COMPLETED").length;
+    return {
+      key: dayKey,
+      label: format(date, "MMM d"),
+      dateLabel: format(date, "EEE, MMM d yyyy"),
+      completed,
+      open,
+      total: dayTasks.length,
+      tasks: dayTasks.slice(0, 6).map((task) => ({
+        id: task.id,
+        title: task.title,
+        status: task.status,
+        project: task.project.name,
+      })),
+    };
+  });
+
+  return { status, days, projectCount: projects.length };
 }

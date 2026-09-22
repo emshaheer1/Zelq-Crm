@@ -18,6 +18,7 @@ import { Surface, SectionTitle } from "@/components/shared/surface";
 import { ActivityTimeline } from "@/components/shared/activity-timeline";
 import { TaskCard } from "@/components/tasks/task-card";
 import { WorkChart } from "@/components/dashboard/work-chart";
+import { ProjectStatusChart } from "@/components/dashboard/project-status-chart";
 import { Progress } from "@/components/ui/progress";
 import { PriorityBadge, StatusBadge } from "@/components/shared/status-badge";
 import { CreateButton } from "@/components/forms/create-dialogs";
@@ -33,6 +34,7 @@ import {
   getDashboardExtras,
   getDashboardStats,
   getEmployeeDashboard,
+  getProjectStatusChart,
   getTeamWorkload,
   getUpcomingWork,
 } from "@/server/queries";
@@ -41,7 +43,10 @@ export default async function DashboardPage() {
   const user = await requireUser();
 
   if (!isStaff(user.role)) {
-    const data = await getEmployeeDashboard(user);
+    const [data, projectChart] = await Promise.all([
+      getEmployeeDashboard(user),
+      getProjectStatusChart(user),
+    ]);
     const open =
       data.today.length +
       data.upcoming.length +
@@ -69,6 +74,7 @@ export default async function DashboardPage() {
           <StatCard icon={CircleCheckBig} label="Completed This Month" value={data.stats.completedThisMonth} tone="green" />
         </div>
         <WorkChart rows={workRows} />
+        <ProjectStatusChart data={projectChart} />
         <div className="grid gap-6 xl:grid-cols-[1.65fr_0.85fr]">
           <Section title="Today's Tasks" description="Work that needs attention today." items={data.today} empty="No tasks assigned yet." />
           <Section title="Upcoming" description="What's next on your list." items={data.upcoming} empty="Nothing upcoming." />
@@ -79,11 +85,12 @@ export default async function DashboardPage() {
     );
   }
 
-  const [stats, team, work, extras] = await Promise.all([
+  const [stats, team, work, extras, projectChart] = await Promise.all([
     getDashboardStats(user),
     getTeamWorkload(),
     getUpcomingWork(user),
     getDashboardExtras(user),
+    getProjectStatusChart(user),
   ]);
 
   const workRows = team.map((member) => ({
@@ -113,6 +120,7 @@ export default async function DashboardPage() {
       </div>
 
       <WorkChart rows={workRows} />
+      <ProjectStatusChart data={projectChart} />
 
       <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
         <Surface padded={false} className="min-w-0">
