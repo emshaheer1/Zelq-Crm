@@ -369,6 +369,7 @@ export async function getProjectStatusChart(user: AuthUser) {
         completedAt: true,
         createdAt: true,
         project: { select: { id: true, name: true } },
+        assignedTo: { select: { id: true, name: true, avatarUrl: true } },
       },
       orderBy: { deadline: "asc" },
     }),
@@ -390,6 +391,23 @@ export async function getProjectStatusChart(user: AuthUser) {
     });
     const completed = dayTasks.filter((task) => task.status === "COMPLETED").length;
     const open = dayTasks.filter((task) => task.status !== "COMPLETED").length;
+    const peopleMap = new Map<string, { id: string; name: string; avatarUrl: string | null; done: boolean }>();
+    for (const task of dayTasks) {
+      const person = task.assignedTo;
+      const existing = peopleMap.get(person.id);
+      const done = task.status === "COMPLETED";
+      if (!existing) {
+        peopleMap.set(person.id, {
+          id: person.id,
+          name: person.name,
+          avatarUrl: person.avatarUrl,
+          done,
+        });
+      } else if (done) {
+        existing.done = true;
+      }
+    }
+    const people = [...peopleMap.values()].sort((a, b) => Number(b.done) - Number(a.done));
     return {
       key: dayKey,
       label: format(date, "MMM d"),
@@ -397,11 +415,17 @@ export async function getProjectStatusChart(user: AuthUser) {
       completed,
       open,
       total: dayTasks.length,
+      people,
       tasks: dayTasks.slice(0, 6).map((task) => ({
         id: task.id,
         title: task.title,
         status: task.status,
         project: task.project.name,
+        assignee: {
+          id: task.assignedTo.id,
+          name: task.assignedTo.name,
+          avatarUrl: task.assignedTo.avatarUrl,
+        },
       })),
     };
   });
