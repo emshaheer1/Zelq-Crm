@@ -11,6 +11,7 @@ export default async function ProjectsPage({
   const user = await requireUser();
   const params = await searchParams;
   const scope = await projectScope(user);
+  const canCreate = isStaff(user.role);
 
   const [projects, clients, managers, employees] = await Promise.all([
     prisma.project.findMany({
@@ -35,15 +36,21 @@ export default async function ProjectsPage({
       },
       orderBy: { updatedAt: "desc" },
     }),
-    prisma.client.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    prisma.user.findMany({
-      where: { status: "ACTIVE", role: { in: ["ADMIN", "MANAGER"] } },
-      select: { id: true, name: true },
-    }),
-    prisma.user.findMany({
-      where: { status: "ACTIVE", role: { not: "ADMIN" } },
-      select: { id: true, name: true },
-    }),
+    canCreate
+      ? prisma.client.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } })
+      : Promise.resolve([] as { id: string; name: string }[]),
+    canCreate
+      ? prisma.user.findMany({
+          where: { status: "ACTIVE", role: { in: ["ADMIN", "MANAGER"] } },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([] as { id: string; name: string }[]),
+    canCreate
+      ? prisma.user.findMany({
+          where: { status: "ACTIVE", role: { not: "ADMIN" } },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([] as { id: string; name: string }[]),
   ]);
 
   return (
@@ -55,8 +62,8 @@ export default async function ProjectsPage({
       clients={clients}
       managers={managers}
       employees={employees}
-      canCreate={isStaff(user.role)}
-      openCreate={params.new === "1" && isStaff(user.role)}
+      canCreate={canCreate}
+      openCreate={params.new === "1" && canCreate}
     />
   );
 }

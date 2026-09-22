@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, ExternalLink, MoreHorizontal } from "lucide-react";
-import type { Prisma } from "@prisma/client";
+import type { Priority, ProjectStatus, TaskStatus } from "@prisma/client";
 import { PriorityBadge, StatusBadge } from "@/components/shared/status-badge";
 import { TaskCard } from "@/components/tasks/task-card";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -28,14 +28,36 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CircleCheckBig, Clock3, FolderKanban } from "lucide-react";
 
-type Project = Prisma.ProjectGetPayload<{
-  include: {
-    client: true;
-    manager: true;
-    members: { include: { user: true } };
-    tasks: { include: { project: true; assignedTo: true } };
-  };
-}>;
+type Project = {
+  id: string;
+  name: string;
+  description: string | null;
+  clientId: string;
+  managerId: string;
+  startDate: Date | null;
+  deadline: Date | null;
+  priority: Priority;
+  status: ProjectStatus;
+  driveFolderUrl: string | null;
+  notes: string | null;
+  client: { id: string; name: string; companyName: string | null };
+  manager: { id: string; name: string; avatarUrl: string | null };
+  members: {
+    id: string;
+    userId: string;
+    user: { id: string; name: string; avatarUrl: string | null };
+  }[];
+  tasks: {
+    id: string;
+    title: string;
+    status: TaskStatus;
+    priority: Priority;
+    deadline: Date | null;
+    driveUploaded: boolean;
+    project: { name: string };
+    assignedTo: { name: string; avatarUrl: string | null };
+  }[];
+};
 
 type ProjectActivity = {
   id: string;

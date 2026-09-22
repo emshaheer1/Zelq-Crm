@@ -39,6 +39,7 @@ export default async function TaskDetailPage({
           user: { select: { name: true, avatarUrl: true, role: true } },
         },
         orderBy: { createdAt: "asc" },
+        take: 100,
       },
       activities: {
         select: {
@@ -48,6 +49,7 @@ export default async function TaskDetailPage({
           user: { select: { name: true, avatarUrl: true } },
         },
         orderBy: { createdAt: "desc" },
+        take: 60,
       },
       reviews: {
         select: {
@@ -58,6 +60,7 @@ export default async function TaskDetailPage({
           reviewer: { select: { name: true } },
         },
         orderBy: { createdAt: "desc" },
+        take: 30,
       },
     },
   });

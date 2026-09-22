@@ -11,18 +11,59 @@ export default async function ProjectDetailPage({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const project = await prisma.project.findUnique({
-    where: { id },
-    include: {
-      client: true,
-      manager: true,
-      members: { include: { user: true } },
-      tasks: {
-        include: { project: true, assignedTo: true },
-        orderBy: { deadline: "asc" },
+
+  const [project, activities] = await Promise.all([
+    prisma.project.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        clientId: true,
+        managerId: true,
+        startDate: true,
+        deadline: true,
+        priority: true,
+        status: true,
+        driveFolderUrl: true,
+        notes: true,
+        client: { select: { id: true, name: true, companyName: true } },
+        manager: { select: { id: true, name: true, avatarUrl: true } },
+        members: {
+          select: {
+            id: true,
+            userId: true,
+            user: { select: { id: true, name: true, avatarUrl: true } },
+          },
+        },
+        tasks: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            priority: true,
+            deadline: true,
+            driveUploaded: true,
+            project: { select: { name: true } },
+            assignedTo: { select: { name: true, avatarUrl: true } },
+          },
+          orderBy: { deadline: "asc" },
+        },
       },
-    },
-  });
+    }),
+    prisma.taskActivity.findMany({
+      where: { task: { projectId: id } },
+      select: {
+        id: true,
+        message: true,
+        createdAt: true,
+        user: { select: { name: true, avatarUrl: true } },
+        task: { select: { id: true, title: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 80,
+    }),
+  ]);
 
   if (!project) notFound();
   if (
@@ -33,18 +74,6 @@ export default async function ProjectDetailPage({
   ) {
     notFound();
   }
-
-  const activities = await prisma.taskActivity.findMany({
-    where: { task: { projectId: id } },
-    select: {
-      id: true,
-      message: true,
-      createdAt: true,
-      user: { select: { name: true, avatarUrl: true } },
-      task: { select: { id: true, title: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
 
   const progress = projectProgress(project.tasks);
   const completed = project.tasks.filter((task) => task.status === "COMPLETED").length;

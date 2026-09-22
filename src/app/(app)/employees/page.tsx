@@ -26,11 +26,37 @@ function tasksForWorkload(
 export default async function EmployeesPage() {
   const user = await requireStaff();
   const month = monthRange(new Date().getFullYear(), new Date().getMonth() + 1);
+  const today = startOfToday();
+
+  // Only load tasks that affect list counters (open work + this month's completions).
   const employees = await prisma.user.findMany({
     orderBy: { name: "asc" },
-    include: {
-      assignedTasks: { select: { id: true, status: true, completedAt: true, deadline: true } },
-      createdTasks: { select: { id: true, status: true, completedAt: true, deadline: true } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      designation: true,
+      avatarUrl: true,
+      status: true,
+      assignedTasks: {
+        where: {
+          OR: [
+            { status: { not: "COMPLETED" } },
+            { completedAt: { gte: month.start, lte: month.end } },
+          ],
+        },
+        select: { id: true, status: true, completedAt: true, deadline: true },
+      },
+      createdTasks: {
+        where: {
+          OR: [
+            { status: { not: "COMPLETED" } },
+            { completedAt: { gte: month.start, lte: month.end } },
+          ],
+        },
+        select: { id: true, status: true, completedAt: true, deadline: true },
+      },
     },
   });
 
@@ -59,10 +85,7 @@ export default async function EmployeesPage() {
               task.completedAt <= month.end,
           ).length,
           overdue: tasks.filter(
-            (task) =>
-              task.status !== "COMPLETED" &&
-              task.deadline &&
-              task.deadline < startOfToday(),
+            (task) => task.status !== "COMPLETED" && task.deadline && task.deadline < today,
           ).length,
         };
       })}

@@ -18,11 +18,10 @@ type Props = {
 
 export function LiveSync({ onData }: Props) {
   const router = useRouter();
-  const signatureRef = useRef("");
   const onDataRef = useRef(onData);
   onDataRef.current = onData;
 
-  const pullNotifications = useCallback(async (opts?: { forcePageRefresh?: boolean }) => {
+  const pullNotifications = useCallback(async () => {
     const response = await fetch("/api/notifications", { cache: "no-store" }).catch(() => null);
     if (!response?.ok) return;
     const data = (await response.json().catch(() => null)) as {
@@ -30,21 +29,11 @@ export function LiveSync({ onData }: Props) {
       notifications?: LiveNotice[];
     } | null;
     if (!data) return;
-
-    const list = data.notifications ?? [];
-    const unread = data.unread ?? 0;
-    const signature = `${unread}:${list[0]?.id ?? ""}:${list.map((item) => (item.read ? "1" : "0")).join("")}`;
-    const changed = signatureRef.current !== "" && signatureRef.current !== signature;
-    signatureRef.current = signature;
-    onDataRef.current({ unread, notifications: list });
-
-    if (opts?.forcePageRefresh) {
-      router.refresh();
-    } else if (changed) {
-      const dialogOpen = Boolean(document.querySelector('[data-slot="dialog-content"]'));
-      if (!dialogOpen) router.refresh();
-    }
-  }, [router]);
+    onDataRef.current({
+      unread: data.unread ?? 0,
+      notifications: data.notifications ?? [],
+    });
+  }, []);
 
   useEffect(() => {
     void pullNotifications();
@@ -54,15 +43,16 @@ export function LiveSync({ onData }: Props) {
       void pullNotifications();
     };
     const onNotices = () => {
-      void pullNotifications({ forcePageRefresh: false });
+      void pullNotifications();
     };
 
     window.addEventListener("zelq:refresh", onSoftRefresh);
     window.addEventListener("zelq:notifications", onNotices);
 
+    // Poll bell only — do not router.refresh() here (that re-ran every heavy page query).
     const timer = window.setInterval(() => {
       void pullNotifications();
-    }, 4000);
+    }, 15000);
 
     const onVisible = () => {
       if (document.visibilityState === "visible") void pullNotifications();

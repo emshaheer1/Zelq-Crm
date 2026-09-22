@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
-import type { User } from "@prisma/client";
+import type { UserStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apiJson } from "@/lib/client-api";
 
-export function EmployeeAdminActions({ employee }: { employee: User }) {
+export function EmployeeAdminActions({
+  employee,
+}: {
+  employee: { id: string; name: string; status: UserStatus };
+}) {
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState(employee.status);
 

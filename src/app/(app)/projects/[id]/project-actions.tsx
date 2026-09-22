@@ -1,7 +1,6 @@
 "use client";
 
 import { actionCatch, actionOk } from "@/components/shared/action-popup";
-import type { Prisma } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Surface, SectionTitle } from "@/components/shared/surface";
@@ -23,7 +22,11 @@ import { useState } from "react";
 export function ProjectActions({
   project,
 }: {
-  project: Prisma.ProjectGetPayload<object>;
+  project: {
+    id: string;
+    notes: string | null;
+    status: string;
+  };
 }) {
   const [notes, setNotes] = useState(project.notes ?? "");
   const [pending, setPending] = useState(false);

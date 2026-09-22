@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { UserStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isStaff, requireUser } from "@/lib/permissions";
 import { formatDate, monthLabel, monthRange, startOfToday } from "@/lib/dates";
@@ -22,6 +23,19 @@ import {
 import { EmployeeAdminActions } from "./employee-admin-actions";
 import { MonthPicker } from "./month-picker";
 
+const taskCardSelect = {
+  id: true,
+  title: true,
+  status: true,
+  priority: true,
+  deadline: true,
+  driveUploaded: true,
+  createdAt: true,
+  completedAt: true,
+  project: { select: { name: true } },
+  assignedTo: { select: { name: true, avatarUrl: true } },
+} as const;
+
 export default async function EmployeeProfilePage({
   params,
   searchParams,
@@ -39,47 +53,63 @@ export default async function EmployeeProfilePage({
   const year = Number(query.year) || now.getFullYear();
   const month = Number(query.month) || now.getMonth() + 1;
   const range = monthRange(year, month);
+  const today = startOfToday();
 
   const employee = await prisma.user.findUnique({
     where: { id },
-    include: {
-      assignedTasks: {
-        include: { project: true, assignedTo: true },
-        orderBy: { createdAt: "desc" },
-      },
-      createdTasks: {
-        include: { project: true, assignedTo: true },
-        orderBy: { createdAt: "desc" },
-      },
-      projectMemberships: { include: { project: true } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      designation: true,
+      avatarUrl: true,
+      status: true,
+      joiningDate: true,
     },
   });
   if (!employee) notFound();
 
-  const workTasks =
-    employee.role === "MANAGER" || employee.role === "ADMIN"
-      ? (() => {
-          const map = new Map(employee.createdTasks.map((task) => [task.id, task]));
-          for (const task of employee.assignedTasks) map.set(task.id, task);
-          return [...map.values()].sort(
-            (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-          );
-        })()
-      : employee.assignedTasks;
+  const isManagerish = employee.role === "MANAGER" || employee.role === "ADMIN";
+  const personScope = isManagerish
+    ? { OR: [{ assignedToId: id }, { assignedById: id }] }
+    : { assignedToId: id };
+  const openWhere = { ...personScope, status: { not: "COMPLETED" as const } };
+  const completedWhere = { ...personScope, status: "COMPLETED" as const };
 
-  const monthTasks = workTasks.filter(
-    (task) =>
-      (task.createdAt >= range.start && task.createdAt <= range.end) ||
-      (task.deadline && task.deadline >= range.start && task.deadline <= range.end) ||
-      (task.completedAt && task.completedAt >= range.start && task.completedAt <= range.end),
-  );
-  const completed = monthTasks.filter((task) => task.status === "COMPLETED").length;
-  const pending = monthTasks.filter((task) => task.status !== "COMPLETED").length;
-  const overdue = monthTasks.filter(
-    (task) => task.status !== "COMPLETED" && task.deadline && task.deadline < startOfToday(),
+  const [openCount, openTasks, completedTasks, monthTasks] = await Promise.all([
+    prisma.task.count({ where: openWhere }),
+    prisma.task.findMany({
+      where: openWhere,
+      select: taskCardSelect,
+      orderBy: { updatedAt: "desc" },
+      take: 8,
+    }),
+    prisma.task.findMany({
+      where: completedWhere,
+      select: taskCardSelect,
+      orderBy: { completedAt: "desc" },
+      take: 12,
+    }),
+    prisma.task.findMany({
+      where: {
+        ...personScope,
+        OR: [
+          { createdAt: { gte: range.start, lte: range.end } },
+          { deadline: { gte: range.start, lte: range.end } },
+          { completedAt: { gte: range.start, lte: range.end } },
+        ],
+      },
+      select: { id: true, status: true, deadline: true },
+    }),
+  ]);
+
+  const monthUnique = [...new Map(monthTasks.map((task) => [task.id, task])).values()];
+  const completed = monthUnique.filter((task) => task.status === "COMPLETED").length;
+  const pending = monthUnique.filter((task) => task.status !== "COMPLETED").length;
+  const overdue = monthUnique.filter(
+    (task) => task.status !== "COMPLETED" && task.deadline && task.deadline < today,
   ).length;
-  const currentTasks = workTasks.filter((task) => task.status !== "COMPLETED");
-  const completedTasks = workTasks.filter((task) => task.status === "COMPLETED");
 
   return (
     <div className="space-y-6">
@@ -102,31 +132,54 @@ export default async function EmployeeProfilePage({
       </Surface>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={ListTodo} label="Active Tasks" value={currentTasks.length} hint="Currently assigned" />
-        <StatCard icon={CircleCheckBig} label="Completed This Month" value={completed} hint={monthLabel(year, month)} />
+        <StatCard icon={ListTodo} label="Active Tasks" value={openCount} hint="Currently assigned" />
+        <StatCard
+          icon={CircleCheckBig}
+          label="Completed This Month"
+          value={completed}
+          hint={monthLabel(year, month)}
+        />
         <StatCard icon={Clock3} label="Pending" value={pending} hint="Still open this month" />
-        <StatCard icon={TriangleAlert} label="Overdue" value={overdue} hint="Requires attention" danger={overdue > 0} />
+        <StatCard
+          icon={TriangleAlert}
+          label="Overdue"
+          value={overdue}
+          hint="Requires attention"
+          danger={overdue > 0}
+        />
       </div>
 
-      {current.role === "ADMIN" ? <EmployeeAdminActions employee={employee} /> : null}
+      {current.role === "ADMIN" ? (
+        <EmployeeAdminActions
+          employee={{
+            id: employee.id,
+            name: employee.name,
+            status: employee.status as UserStatus,
+          }}
+        />
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
         <Surface>
           <SectionTitle title="Current Tasks" description="Work still assigned to this employee." />
-          {currentTasks.length === 0 ? (
+          {openTasks.length === 0 ? (
             <EmptyState title="No tasks assigned yet." />
           ) : (
             <div className="grid gap-3">
-              {currentTasks.slice(0, 6).map((task) => (
+              {openTasks.map((task) => (
                 <TaskCard key={task.id} task={task} />
               ))}
             </div>
           )}
         </Surface>
         <Surface>
-          <SectionTitle title="Monthly Performance" description={monthLabel(year, month)} action={<MonthPicker year={year} month={month} />} />
+          <SectionTitle
+            title="Monthly Performance"
+            description={monthLabel(year, month)}
+            action={<MonthPicker year={year} month={month} />}
+          />
           <div className="grid gap-3">
-            <PerfRow label="Tasks assigned" value={monthTasks.length} />
+            <PerfRow label="Tasks assigned" value={monthUnique.length} />
             <PerfRow label="Completed" value={completed} />
             <PerfRow label="Pending" value={pending} />
             <PerfRow label="Overdue" value={overdue} danger={overdue > 0} />
@@ -155,16 +208,20 @@ export default async function EmployeeProfilePage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {completedTasks.slice(0, 12).map((task) => (
+              {completedTasks.map((task) => (
                 <TableRow key={task.id} className="h-16">
                   <TableCell>
-                    <Link href={`/tasks/${task.id}`} className="font-medium text-[#111827] hover:text-[#111111]">{task.title}</Link>
+                    <Link href={`/tasks/${task.id}`} className="font-medium text-[#111827] hover:text-[#111111]">
+                      {task.title}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-[#667085]">{task.project.name}</TableCell>
                   <TableCell className="text-[#667085]">{formatDate(task.createdAt)}</TableCell>
                   <TableCell className="text-[#667085]">{formatDate(task.deadline)}</TableCell>
                   <TableCell className="text-[#667085]">{formatDate(task.completedAt)}</TableCell>
-                  <TableCell><StatusBadge value={task.status} /></TableCell>
+                  <TableCell>
+                    <StatusBadge value={task.status} />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -179,7 +236,9 @@ function PerfRow({ label, value, danger = false }: { label: string; value: numbe
   return (
     <div className="flex items-center justify-between rounded-lg bg-[#F8F9FA] px-4 py-3">
       <p className="text-[13px] text-[#667085]">{label}</p>
-      <p className={`text-sm font-semibold ${danger ? "text-[#B42318]" : "text-[#111827]"}`}>{String(value).padStart(2, "0")}</p>
+      <p className={`text-sm font-semibold ${danger ? "text-[#B42318]" : "text-[#111827]"}`}>
+        {String(value).padStart(2, "0")}
+      </p>
     </div>
   );
 }

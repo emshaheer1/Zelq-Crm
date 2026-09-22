@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -64,10 +63,6 @@ export function CreateDialogsProvider({
       })
       .catch(() => {});
   }, [enabled]);
-
-  useEffect(() => {
-    prefetch();
-  }, [prefetch]);
 
   const open = useCallback(
     (next: Kind) => {
