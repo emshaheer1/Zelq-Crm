@@ -24,14 +24,26 @@ export function ZelqLogo({
   }
 
   return (
-    <img
-      src="/logo-full.png"
-      alt="ZelQ Solutions"
-      className={cn(
-        "h-12 w-auto max-w-[200px] object-contain object-left",
-        inverted && "mix-blend-screen",
-        className,
-      )}
-    />
+    <div className={cn("flex items-center gap-3", className)}>
+      <ZelqMark className="size-10" />
+      <div className="min-w-0 font-[family-name:var(--font-poppins)] leading-tight">
+        <p
+          className={cn(
+            "truncate text-[15px] font-semibold tracking-tight",
+            inverted ? "text-white" : "text-foreground",
+          )}
+        >
+          ZelQ Solutions
+        </p>
+        <p
+          className={cn(
+            "truncate text-[11px] font-medium tracking-wide",
+            inverted ? "text-white/55" : "text-muted-foreground",
+          )}
+        >
+          Build. Automate. Scale.
+        </p>
+      </div>
+    </div>
   );
 }

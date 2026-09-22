@@ -24,8 +24,12 @@ export const metadata: Metadata = {
   title: "ZelQ CRM",
   description: "Internal work management for ZelQ Solutions.",
   icons: {
-    icon: [{ url: "/z-logo.png", type: "image/png" }],
-    apple: [{ url: "/z-logo.png", type: "image/png" }],
+    icon: [
+      { url: "/z-logo.png", type: "image/png", sizes: "any" },
+      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [{ url: "/apple-icon.png", type: "image/png" }],
   },
 };
 
