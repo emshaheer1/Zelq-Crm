@@ -270,6 +270,48 @@ a {
   animation: login-scan 7s ease-in-out infinite;
 }
 
+@keyframes project-kpi-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.project-kpi-in {
+  animation: project-kpi-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes project-mark-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+.project-mark-in {
+  animation: project-mark-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes project-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.project-panel-in {
+  animation: project-panel-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *:not(.login-motion),
   *:not(.login-motion)::before,
