@@ -152,7 +152,8 @@ export function TaskActions({
       ) : null}
 
       <section className="rounded-xl border border-[#EAECF0] bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <h2 className="mb-4 text-sm font-semibold text-[#111827]">Drive update</h2>
+        <h2 className="mb-1 text-sm font-semibold text-[#111827]">Drive update</h2>
+        <p className="mb-4 text-[13px] text-[#667085]">Optional. You can submit for review without a Drive link.</p>
         <div className="space-y-3">
           <div>
             <Label className="text-xs text-[#667085]">Uploaded to Google Drive?</Label>
@@ -169,7 +170,7 @@ export function TaskActions({
             <>
               <div className="space-y-1.5">
                 <Label>Google Drive Link</Label>
-                <Input value={url} onChange={(event) => setUrl(event.target.value)} required placeholder="https://drive.google.com/..." />
+                <Input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://drive.google.com/..." />
               </div>
               <div className="space-y-1.5">
                 <Label>Optional note</Label>

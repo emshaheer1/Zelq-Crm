@@ -84,11 +84,18 @@ export async function POST(
             updatedAt: new Date(),
           },
         });
-        task.driveUploaded = true;
-        task.driveUrl = body.url;
-      }
-      if (!task.driveUploaded || !task.driveUrl) {
-        return jsonError("Upload the work to Google Drive and add the link first.");
+      } else if (body.uploaded === false) {
+        await prisma.task.update({
+          where: { id },
+          data: {
+            driveUploaded: false,
+            driveUrl: null,
+            driveNote: body.note || null,
+            driveUploadedAt: null,
+            driveUploadedById: null,
+            updatedAt: new Date(),
+          },
+        });
       }
       if (!["IN_PROGRESS", "REVISION_REQUIRED", "PENDING"].includes(task.status)) {
         return jsonError("This task is not ready to submit.");

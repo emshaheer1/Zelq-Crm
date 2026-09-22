@@ -168,9 +168,6 @@ export async function submitForReview(id: string) {
   if (!canAccessTask(user, task.assignedToId)) {
     throw new Error("You cannot submit this task.");
   }
-  if (!task.driveUploaded || !task.driveUrl) {
-    throw new Error("Upload the work to Google Drive and add the link first.");
-  }
   if (
     task.status !== "IN_PROGRESS" &&
     task.status !== "REVISION_REQUIRED" &&
