@@ -34,6 +34,18 @@ export default async function ProjectDetailPage({
     notFound();
   }
 
+  const activities = await prisma.taskActivity.findMany({
+    where: { task: { projectId: id } },
+    select: {
+      id: true,
+      message: true,
+      createdAt: true,
+      user: { select: { name: true, avatarUrl: true } },
+      task: { select: { id: true, title: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
   const progress = projectProgress(project.tasks);
   const completed = project.tasks.filter((task) => task.status === "COMPLETED").length;
 
@@ -42,6 +54,7 @@ export default async function ProjectDetailPage({
       project={project}
       progress={progress}
       completed={completed}
+      activities={activities}
       canManage={isStaff(user.role)}
     />
   );

@@ -160,13 +160,13 @@ export function ProjectsWorkspace({
               <div className="mt-5">
                 <div className="mb-2 flex items-center justify-between text-[13px]">
                   <span className="text-[#667085]">Progress</span>
-                  <span className="font-semibold text-[#111827]">{project.progress}%</span>
+                  <span className="font-semibold text-[#027A48]">{project.progress}%</span>
                 </div>
                 <Progress value={project.progress} className="h-1.5" />
               </div>
               <div className="mt-5 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[13px] text-[#667085]">
-                  <CalendarDays className="size-4" />
+                <div className="flex items-center gap-1.5 text-[13px] font-medium text-[#111827]">
+                  <CalendarDays className="size-4 text-[#667085]" />
                   Due {formatDate(project.deadline)}
                 </div>
                 <div className="flex items-center gap-1.5">

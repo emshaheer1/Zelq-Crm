@@ -24,7 +24,7 @@ export function TaskCard({ task, compact = false }: { task: TaskCardTask; compac
     <Link
       href={`/tasks/${task.id}`}
       className={cn(
-        "block rounded-xl border border-border bg-card p-4 transition-colors duration-150 hover:border-[#d0d5dd] hover:bg-muted/40",
+        "block rounded-xl border border-border bg-card p-4 text-foreground transition-colors duration-150 hover:border-[#d0d5dd] hover:bg-muted/40 hover:text-foreground",
         compact && "p-3.5",
       )}
     >
