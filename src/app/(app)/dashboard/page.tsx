@@ -35,17 +35,27 @@ import {
   getEmployeeDashboard,
   getTeamWorkload,
   getUpcomingWork,
-  getWorkByClient,
 } from "@/server/queries";
 
 export default async function DashboardPage() {
   const user = await requireUser();
 
   if (!isStaff(user.role)) {
-    const [data, workByClient] = await Promise.all([
-      getEmployeeDashboard(user),
-      getWorkByClient(user),
-    ]);
+    const data = await getEmployeeDashboard(user);
+    const open =
+      data.today.length +
+      data.upcoming.length +
+      data.review.length +
+      data.revision.length;
+    const workRows = [
+      {
+        id: user.id,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        completed: data.stats.completedThisMonth,
+        pending: open,
+      },
+    ];
     return (
       <div className="space-y-6">
         <PageHeader
@@ -58,7 +68,7 @@ export default async function DashboardPage() {
           <StatCard icon={TriangleAlert} label="Overdue" value={data.stats.overdueTasks} tone="red" />
           <StatCard icon={CircleCheckBig} label="Completed This Month" value={data.stats.completedThisMonth} tone="green" />
         </div>
-        <WorkChart rows={workByClient} />
+        <WorkChart rows={workRows} />
         <div className="grid gap-6 xl:grid-cols-[1.65fr_0.85fr]">
           <Section title="Today's Tasks" description="Work that needs attention today." items={data.today} empty="No tasks assigned yet." />
           <Section title="Upcoming" description="What's next on your list." items={data.upcoming} empty="Nothing upcoming." />
@@ -69,13 +79,20 @@ export default async function DashboardPage() {
     );
   }
 
-  const [stats, team, work, extras, workByClient] = await Promise.all([
+  const [stats, team, work, extras] = await Promise.all([
     getDashboardStats(user),
     getTeamWorkload(),
     getUpcomingWork(user),
     getDashboardExtras(user),
-    getWorkByClient(user),
   ]);
+
+  const workRows = team.map((member) => ({
+    id: member.id,
+    name: member.name,
+    avatarUrl: member.avatarUrl,
+    completed: member.completed,
+    pending: member.pending + member.active,
+  }));
 
   const deadlines = [...work.today, ...work.tomorrow, ...work.upcoming].slice(0, 6);
 
@@ -95,7 +112,7 @@ export default async function DashboardPage() {
         <StatCard icon={TriangleAlert} label="Overdue" value={stats.overdueTasks} tone="red" />
       </div>
 
-      <WorkChart rows={workByClient} />
+      <WorkChart rows={workRows} />
 
       <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
         <Surface padded={false} className="min-w-0">
