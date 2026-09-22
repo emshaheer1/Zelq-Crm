@@ -23,6 +23,10 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "ZelQ CRM",
   description: "Internal work management for ZelQ Solutions.",
+  icons: {
+    icon: [{ url: "/z-logo.png", type: "image/png" }],
+    apple: [{ url: "/z-logo.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

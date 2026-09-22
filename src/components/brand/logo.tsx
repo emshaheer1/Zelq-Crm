@@ -13,28 +13,25 @@ export function ZelqMark({ className }: { className?: string }) {
 export function ZelqLogo({
   compact = false,
   inverted = false,
+  className,
 }: {
   compact?: boolean;
   inverted?: boolean;
+  className?: string;
 }) {
+  if (compact) {
+    return <ZelqMark className={cn("size-10", className)} />;
+  }
+
   return (
-    <div className="flex items-center gap-3">
-      <ZelqMark className="size-10" />
-      {!compact && (
-        <div className="min-w-0 leading-tight">
-          <p
-            className={cn(
-              "truncate text-[15px] font-semibold tracking-tight",
-              inverted ? "text-white" : "text-foreground",
-            )}
-          >
-            ZelQ
-          </p>
-          <p className={cn("truncate text-[11px]", inverted ? "text-white/50" : "text-muted-foreground")}>
-            Build. Automate. Scale.
-          </p>
-        </div>
+    <img
+      src="/logo-full.png"
+      alt="ZelQ Solutions"
+      className={cn(
+        "h-12 w-auto max-w-[200px] object-contain object-left",
+        inverted && "mix-blend-screen",
+        className,
       )}
-    </div>
+    />
   );
 }
