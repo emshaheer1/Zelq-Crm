@@ -341,6 +341,177 @@ export async function getWorkByClient(user: AuthUser) {
   return [...map.values()].sort((a, b) => b.assigned - a.assigned).slice(0, 6);
 }
 
+export type InsightPerson = {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+};
+
+export type DashboardInsights = {
+  pipeline: {
+    key: TaskStatus;
+    label: string;
+    count: number;
+    people: InsightPerson[];
+  }[];
+  priorities: {
+    key: "HIGH" | "MEDIUM" | "LOW";
+    label: string;
+    count: number;
+    overdue: number;
+    people: InsightPerson[];
+  }[];
+  clients: {
+    id: string;
+    name: string;
+    assigned: number;
+    done: number;
+    left: number;
+    people: InsightPerson[];
+  }[];
+};
+
+const PIPELINE_ORDER: TaskStatus[] = [
+  "PENDING",
+  "IN_PROGRESS",
+  "READY_FOR_REVIEW",
+  "REVISION_REQUIRED",
+  "COMPLETED",
+];
+
+function pushPerson(
+  map: Map<string, InsightPerson>,
+  person: { id: string; name: string; avatarUrl: string | null },
+  limit = 4,
+) {
+  if (map.has(person.id) || map.size >= limit) return;
+  map.set(person.id, {
+    id: person.id,
+    name: person.name,
+    avatarUrl: person.avatarUrl,
+  });
+}
+
+export async function getDashboardInsights(user: AuthUser): Promise<DashboardInsights> {
+  const scope = await taskScope(user);
+  const today = startOfToday();
+
+  const tasks = await prisma.task.findMany({
+    where: scope,
+    select: {
+      status: true,
+      priority: true,
+      deadline: true,
+      project: { select: { client: { select: { id: true, name: true } } } },
+      assignedTo: { select: { id: true, name: true, avatarUrl: true } },
+    },
+  });
+
+  const statusPeople = new Map<TaskStatus, Map<string, InsightPerson>>();
+  const statusCounts = new Map<TaskStatus, number>();
+  for (const key of PIPELINE_ORDER) {
+    statusPeople.set(key, new Map());
+    statusCounts.set(key, 0);
+  }
+
+  const priorityPeople = {
+    HIGH: new Map<string, InsightPerson>(),
+    MEDIUM: new Map<string, InsightPerson>(),
+    LOW: new Map<string, InsightPerson>(),
+  };
+  const priorityCounts = { HIGH: 0, MEDIUM: 0, LOW: 0 };
+  const priorityOverdue = { HIGH: 0, MEDIUM: 0, LOW: 0 };
+
+  const clientMap = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      assigned: number;
+      done: number;
+      left: number;
+      people: Map<string, InsightPerson>;
+    }
+  >();
+
+  for (const task of tasks) {
+    if (PIPELINE_ORDER.includes(task.status)) {
+      statusCounts.set(task.status, (statusCounts.get(task.status) ?? 0) + 1);
+      pushPerson(statusPeople.get(task.status)!, task.assignedTo);
+    }
+
+    if (task.status !== "COMPLETED") {
+      priorityCounts[task.priority] += 1;
+      pushPerson(priorityPeople[task.priority], task.assignedTo);
+      if (task.deadline && task.deadline < today) {
+        priorityOverdue[task.priority] += 1;
+      }
+    }
+
+    const client = task.project.client;
+    let row = clientMap.get(client.id);
+    if (!row) {
+      row = {
+        id: client.id,
+        name: client.name,
+        assigned: 0,
+        done: 0,
+        left: 0,
+        people: new Map(),
+      };
+      clientMap.set(client.id, row);
+    }
+    row.assigned += 1;
+    if (task.status === "COMPLETED") row.done += 1;
+    else {
+      row.left += 1;
+      pushPerson(row.people, task.assignedTo);
+    }
+  }
+
+  const labels: Record<TaskStatus, string> = {
+    PENDING: "Pending",
+    IN_PROGRESS: "In progress",
+    READY_FOR_REVIEW: "Review",
+    REVISION_REQUIRED: "Revision",
+    COMPLETED: "Completed",
+    ON_HOLD: "On hold",
+  };
+
+  return {
+    pipeline: PIPELINE_ORDER.map((key) => ({
+      key,
+      label: labels[key],
+      count: statusCounts.get(key) ?? 0,
+      people: [...(statusPeople.get(key)?.values() ?? [])],
+    })),
+    priorities: (
+      [
+        { key: "HIGH" as const, label: "High" },
+        { key: "MEDIUM" as const, label: "Medium" },
+        { key: "LOW" as const, label: "Low" },
+      ] as const
+    ).map((item) => ({
+      key: item.key,
+      label: item.label,
+      count: priorityCounts[item.key],
+      overdue: priorityOverdue[item.key],
+      people: [...priorityPeople[item.key].values()],
+    })),
+    clients: [...clientMap.values()]
+      .sort((a, b) => b.assigned - a.assigned)
+      .slice(0, 5)
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        assigned: row.assigned,
+        done: row.done,
+        left: row.left,
+        people: [...row.people.values()],
+      })),
+  };
+}
+
 export async function getProjectStatusChart(user: AuthUser) {
   const [projectWhere, taskWhere] = await Promise.all([projectScope(user), taskScope(user)]);
   const today = startOfToday();
