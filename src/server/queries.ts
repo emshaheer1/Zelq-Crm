@@ -25,6 +25,20 @@ export async function projectScope(user: AuthUser): Promise<Prisma.ProjectWhereI
   };
 }
 
+/** Open tasks scheduled for the current CRM calendar day (start or deadline). */
+export function todayTasksWhere(scope: Prisma.TaskWhereInput = {}): Prisma.TaskWhereInput {
+  const start = startOfToday();
+  const end = endOfToday();
+  return {
+    ...scope,
+    status: { not: "COMPLETED" },
+    OR: [
+      { deadline: { gte: start, lte: end } },
+      { startDate: { gte: start, lte: end } },
+    ],
+  };
+}
+
 export function projectProgress(tasks: { status: TaskStatus }[]) {
   if (!tasks.length) return 0;
   const completed = tasks.filter((task) => task.status === "COMPLETED").length;
@@ -51,11 +65,7 @@ export async function getDashboardStats(user: AuthUser) {
       where: { ...projectWhere, status: { in: ["NOT_STARTED", "IN_PROGRESS"] } },
     }),
     prisma.task.count({
-      where: {
-        ...scope,
-        status: { not: "COMPLETED" },
-        deadline: { gte: startOfToday(), lte: endOfToday() },
-      },
+      where: todayTasksWhere(scope),
     }),
     prisma.task.count({
       where: { ...scope, status: { in: ["PENDING", "IN_PROGRESS", "ON_HOLD"] } },
@@ -173,13 +183,9 @@ export async function getUpcomingWork(user: AuthUser) {
 
   const [today, tomorrow, upcoming] = await Promise.all([
     prisma.task.findMany({
-      where: {
-        ...scope,
-        status: { not: "COMPLETED" },
-        deadline: { gte: startOfToday(), lte: endOfToday() },
-      },
+      where: todayTasksWhere(scope),
       include,
-      orderBy: { deadline: "asc" },
+      orderBy: [{ deadline: "asc" }, { startDate: "asc" }],
     }),
     prisma.task.findMany({
       where: {
@@ -213,19 +219,27 @@ export async function getEmployeeDashboard(user: AuthUser) {
   const [stats, today, upcoming, review, revision, completed] = await Promise.all([
     getDashboardStats(user),
     prisma.task.findMany({
-      where: {
-        ...where,
-        status: { not: "COMPLETED" },
-        deadline: { gte: startOfToday(), lte: endOfToday() },
-      },
+      where: todayTasksWhere(where),
       include,
-      orderBy: { deadline: "asc" },
+      orderBy: [{ deadline: "asc" }, { startDate: "asc" }],
     }),
     prisma.task.findMany({
       where: {
         ...where,
         status: { not: "COMPLETED" },
-        OR: [{ deadline: { gt: endOfToday() } }, { deadline: null }],
+        AND: [
+          {
+            NOT: {
+              OR: [
+                { deadline: { gte: startOfToday(), lte: endOfToday() } },
+                { startDate: { gte: startOfToday(), lte: endOfToday() } },
+              ],
+            },
+          },
+          {
+            OR: [{ deadline: { gt: endOfToday() } }, { deadline: null }],
+          },
+        ],
       },
       include,
       orderBy: { deadline: "asc" },

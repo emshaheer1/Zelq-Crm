@@ -76,7 +76,43 @@ export default async function DashboardPage() {
         <WorkChart rows={workRows} />
         <WorkInsights data={insights} />
         <div className="grid gap-6 xl:grid-cols-[1.65fr_0.85fr]">
-          <Section title="Today's Tasks" description="Work that needs attention today." items={data.today} empty="No tasks assigned yet." />
+          <Surface padded={false}>
+            <div className="border-b border-border px-5 py-4">
+              <SectionTitle
+                title="Today's Tasks"
+                description="Work assigned for today."
+              />
+            </div>
+            {data.today.length === 0 ? (
+              <div className="p-6">
+                <EmptyState title="No tasks for today." description="Tasks starting or due today will appear here." icon={ListTodo} />
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {data.today.map((task) => (
+                  <Link
+                    key={task.id}
+                    href={`/tasks/${task.id}`}
+                    className="flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-foreground">{task.title}</p>
+                      <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{task.project.name}</p>
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground">
+                          <UserAvatar name={task.assignedTo.name} src={task.assignedTo.avatarUrl} className="size-5" />
+                          {task.assignedTo.name.split(" ")[0]}
+                        </span>
+                        <PriorityBadge value={task.priority} />
+                        <span className="text-[12px] text-muted-foreground">{formatDeadlineLabel(task.deadline)}</span>
+                        <StatusBadge value={task.status} />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </Surface>
           <Section title="Upcoming" description="What's next on your list." items={data.upcoming} empty="Nothing upcoming." />
         </div>
         <Section title="Waiting for Review" items={data.review} empty="No tasks waiting for review." />
@@ -101,7 +137,9 @@ export default async function DashboardPage() {
     pending: member.pending + member.active,
   }));
 
-  const deadlines = [...work.today, ...work.tomorrow, ...work.upcoming].slice(0, 6);
+  const deadlines = Array.from(
+    new Map([...work.today, ...work.tomorrow, ...work.upcoming].map((task) => [task.id, task])).values(),
+  ).slice(0, 6);
 
   return (
     <div className="space-y-6">
@@ -127,12 +165,12 @@ export default async function DashboardPage() {
           <div className="border-b border-border px-5 py-4">
             <SectionTitle
               title="Today's Tasks"
-              description="Manage work that requires attention today."
+              description="Tasks assigned for today and who they're assigned to."
             />
           </div>
           {work.today.length === 0 ? (
             <div className="p-6">
-              <EmptyState title="No tasks scheduled today." description="New assignments due today will appear here." icon={ListTodo} />
+              <EmptyState title="No tasks for today." description="Tasks starting or due today will appear here." icon={ListTodo} />
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -146,7 +184,7 @@ export default async function DashboardPage() {
                     <div className="mt-2.5 flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1.5 text-[12px] text-foreground">
                         <UserAvatar name={task.assignedTo.name} src={task.assignedTo.avatarUrl} className="size-5" />
-                        {task.assignedTo.name.split(" ")[0]}
+                        Assigned to {task.assignedTo.name.split(" ")[0]}
                       </span>
                       <PriorityBadge value={task.priority} />
                       <span className={isOverdue(task.deadline, task.status) ? "text-[12px] text-destructive" : "text-[12px] text-muted-foreground"}>
