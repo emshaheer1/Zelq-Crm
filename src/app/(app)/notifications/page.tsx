@@ -1,13 +1,4 @@
-import {
-  Bell,
-  CalendarClock,
-  CheckCircle2,
-  Eye,
-  Flag,
-  TriangleAlert,
-  UserPlus,
-} from "lucide-react";
-import type { NotificationType } from "@prisma/client";
+import { Bell } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/permissions";
 import { calendarDateKey, formatRelativeTime, shiftDayKey } from "@/lib/dates";
@@ -16,19 +7,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Surface } from "@/components/shared/surface";
 import { MarkAllButton } from "./mark-all-button";
 import { NotificationRow } from "./notification-row";
-
-const typeMeta: Record<
-  NotificationType,
-  { label: string; icon: typeof Bell }
-> = {
-  TASK_ASSIGNED: { label: "Assignment", icon: UserPlus },
-  DEADLINE_TOMORROW: { label: "Deadline", icon: CalendarClock },
-  TASK_OVERDUE: { label: "Overdue", icon: TriangleAlert },
-  REVIEW_SUBMITTED: { label: "Review", icon: Eye },
-  REVISION_REQUESTED: { label: "Revision", icon: Flag },
-  TASK_APPROVED: { label: "Approved", icon: CheckCircle2 },
-  PROJECT_DEADLINE_APPROACHING: { label: "Project", icon: CalendarClock },
-};
 
 function groupLabel(createdAt: Date) {
   const key = calendarDateKey(createdAt);
@@ -108,22 +86,18 @@ export default async function NotificationsPage() {
                   <p className="text-[11px] tabular-nums text-muted-foreground">{items.length}</p>
                 </div>
                 <div className="divide-y divide-border">
-                  {items.map((item) => {
-                    const meta = typeMeta[item.type] ?? { label: "Update", icon: Bell };
-                    return (
-                      <NotificationRow
-                        key={item.id}
-                        id={item.id}
-                        href={item.href || "/notifications"}
-                        title={item.title}
-                        body={item.body}
-                        read={item.read}
-                        typeLabel={meta.label}
-                        timeLabel={formatRelativeTime(item.createdAt)}
-                        icon={meta.icon}
-                      />
-                    );
-                  })}
+                  {items.map((item) => (
+                    <NotificationRow
+                      key={item.id}
+                      id={item.id}
+                      href={item.href || "/notifications"}
+                      title={item.title}
+                      body={item.body}
+                      read={item.read}
+                      type={item.type}
+                      timeLabel={formatRelativeTime(item.createdAt)}
+                    />
+                  ))}
                 </div>
               </div>
             );

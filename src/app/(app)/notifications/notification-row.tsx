@@ -2,9 +2,29 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { LucideIcon } from "lucide-react";
+import {
+  Bell,
+  CalendarClock,
+  CheckCircle2,
+  Eye,
+  Flag,
+  TriangleAlert,
+  UserPlus,
+  type LucideIcon,
+} from "lucide-react";
+import type { NotificationType } from "@prisma/client";
 import { apiJson, refreshNotifications, softRefresh } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
+
+const typeMeta: Record<NotificationType, { label: string; icon: LucideIcon }> = {
+  TASK_ASSIGNED: { label: "Assignment", icon: UserPlus },
+  DEADLINE_TOMORROW: { label: "Deadline", icon: CalendarClock },
+  TASK_OVERDUE: { label: "Overdue", icon: TriangleAlert },
+  REVIEW_SUBMITTED: { label: "Review", icon: Eye },
+  REVISION_REQUESTED: { label: "Revision", icon: Flag },
+  TASK_APPROVED: { label: "Approved", icon: CheckCircle2 },
+  PROJECT_DEADLINE_APPROACHING: { label: "Project", icon: CalendarClock },
+};
 
 export function NotificationRow({
   id,
@@ -12,20 +32,20 @@ export function NotificationRow({
   title,
   body,
   read,
-  typeLabel,
+  type,
   timeLabel,
-  icon: Icon,
 }: {
   id: string;
   href: string;
   title: string;
   body: string | null;
   read: boolean;
-  typeLabel: string;
+  type: NotificationType;
   timeLabel: string;
-  icon: LucideIcon;
 }) {
   const router = useRouter();
+  const meta = typeMeta[type] ?? { label: "Update", icon: Bell };
+  const Icon = meta.icon;
 
   return (
     <Link
@@ -63,7 +83,7 @@ export function NotificationRow({
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
           <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-            {typeLabel}
+            {meta.label}
           </span>
           {!read ? (
             <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">
