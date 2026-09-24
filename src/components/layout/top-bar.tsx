@@ -6,7 +6,6 @@ import {
   Bell,
   CalendarDays,
   CheckSquare,
-  Eye,
   FolderKanban,
   Menu,
   Plus,
@@ -30,7 +29,7 @@ import { UserAvatar } from "@/components/shared/user-avatar";
 import { apiJson } from "@/lib/client-api";
 import { useCreateDialogs } from "@/components/forms/create-dialogs";
 import { logoutAction } from "@/server/actions/auth";
-import { formatDateTime } from "@/lib/dates";
+import { formatRelativeTime } from "@/lib/dates";
 import { roleLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
@@ -207,13 +206,19 @@ export function TopBar({
                 ) : null}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 p-2">
-              <div className="flex items-center justify-between px-2 py-1.5">
-                <p className="text-xs font-semibold text-muted-foreground">Notifications</p>
+            <DropdownMenuContent align="end" className="w-[340px] p-0">
+              <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-[12px] font-semibold text-foreground">Notifications</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {unread > 0 ? `${unread} unread` : "All caught up"}
+                  </p>
+                </div>
                 {unread > 0 ? (
                   <button
-                    className="text-xs font-medium text-foreground"
-                    onClick={() => {
+                    className="text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    onClick={(event) => {
+                      event.preventDefault();
                       void apiJson("/api/notifications", { method: "PATCH", json: { all: true } })
                         .then(() => {
                           onUnreadChange?.(0);
@@ -222,46 +227,75 @@ export function TopBar({
                         .catch(() => {});
                     }}
                   >
-                    Mark all as read
+                    Mark all read
                   </button>
                 ) : null}
               </div>
-              {notifications.length === 0 ? (
-                <p className="px-2 py-8 text-center text-sm text-muted-foreground">You&apos;re all caught up.</p>
-              ) : (
-                notifications.map((item) => (
-                  <DropdownMenuItem
-                    key={item.id}
-                    className="items-start gap-3 py-2.5"
-                    onClick={async () => {
-                      await apiJson("/api/notifications", { method: "PATCH", json: { id: item.id } }).catch(() => {});
-                      if (!item.read) {
-                        onUnreadChange?.(Math.max(0, unread - 1));
-                        onNotificationsChange?.(
-                          notifications.map((notice) =>
-                            notice.id === item.id ? { ...notice, read: true } : notice,
-                          ),
-                        );
-                      }
-                      if (item.href) router.push(item.href);
-                    }}
-                  >
-                    <span className="mt-0.5 flex size-8 items-center justify-center rounded-lg bg-muted text-foreground">
-                      <Bell className="size-3.5" strokeWidth={1.75} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={cn("block text-sm", item.read ? "text-muted-foreground" : "font-medium text-foreground")}>
-                        {item.title}
+
+              <div className="max-h-[320px] overflow-y-auto py-1">
+                {notifications.length === 0 ? (
+                  <p className="px-3.5 py-8 text-center text-[12px] text-muted-foreground">
+                    No notifications yet.
+                  </p>
+                ) : (
+                  notifications.map((item) => (
+                    <DropdownMenuItem
+                      key={item.id}
+                      className="cursor-pointer items-start gap-2.5 rounded-none px-3.5 py-2.5 focus:bg-muted/70 data-highlighted:bg-muted/70"
+                      onClick={async () => {
+                        await apiJson("/api/notifications", { method: "PATCH", json: { id: item.id } }).catch(() => {});
+                        if (!item.read) {
+                          onUnreadChange?.(Math.max(0, unread - 1));
+                          onNotificationsChange?.(
+                            notifications.map((notice) =>
+                              notice.id === item.id ? { ...notice, read: true } : notice,
+                            ),
+                          );
+                        }
+                        if (item.href) router.push(item.href);
+                      }}
+                    >
+                      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+                        <Bell className="size-3" strokeWidth={1.75} />
                       </span>
-                      {item.body ? <span className="mt-0.5 block text-xs text-muted-foreground">{item.body}</span> : null}
-                      {item.createdAt ? (
-                        <span className="mt-1 block text-[11px] text-muted-foreground">{formatDateTime(item.createdAt)}</span>
-                      ) : null}
-                    </span>
-                    {!item.read ? <span className="mt-1.5 size-1.5 rounded-full bg-primary" /> : null}
-                  </DropdownMenuItem>
-                ))
-              )}
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-start justify-between gap-2">
+                          <span
+                            className={cn(
+                              "line-clamp-2 text-[12px] leading-snug",
+                              item.read ? "font-medium text-muted-foreground" : "font-semibold text-foreground",
+                            )}
+                          >
+                            {item.title}
+                          </span>
+                          {!item.read ? (
+                            <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />
+                          ) : null}
+                        </span>
+                        {item.body ? (
+                          <span className="mt-0.5 block truncate text-[11px] leading-snug text-muted-foreground">
+                            {item.body}
+                          </span>
+                        ) : null}
+                        {item.createdAt ? (
+                          <span className="mt-1 block text-[10px] text-muted-foreground">
+                            {formatRelativeTime(item.createdAt)}
+                          </span>
+                        ) : null}
+                      </span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </div>
+
+              <div className="border-t border-border px-1.5 py-1.5">
+                <DropdownMenuItem
+                  className="justify-center rounded-lg py-2 text-[11px] font-medium text-foreground"
+                  onClick={() => router.push("/notifications")}
+                >
+                  View all notifications
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
 
