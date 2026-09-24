@@ -11,7 +11,7 @@ export function MarkAllButton() {
   const [pending, setPending] = useState(false);
   return (
     <Button
-      variant="outline"
+      variant="secondary"
       disabled={pending}
       onClick={async () => {
         setPending(true);
