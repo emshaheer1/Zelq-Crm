@@ -1,19 +1,25 @@
-import { Bell } from "lucide-react";
+import type { NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/permissions";
-import { calendarDateKey, formatRelativeTime, shiftDayKey } from "@/lib/dates";
 import { PageHeader } from "@/components/shared/page-header";
-import { EmptyState } from "@/components/shared/empty-state";
-import { Surface, SectionTitle } from "@/components/shared/surface";
 import { MarkAllButton } from "./mark-all-button";
-import { NotificationRow } from "./notification-row";
+import { NotificationsWorkspace, type NotificationListItem } from "./notifications-workspace";
 
-function groupLabel(createdAt: Date) {
-  const key = calendarDateKey(createdAt);
-  const today = calendarDateKey();
-  if (key === today) return "Today";
-  if (key === shiftDayKey(today, -1)) return "Yesterday";
-  return "Earlier";
+function actorFor(
+  type: NotificationType,
+  task: {
+    assignedBy: { name: string; avatarUrl: string | null };
+    assignedTo: { name: string; avatarUrl: string | null };
+    reviews: { reviewer: { name: string; avatarUrl: string | null } }[];
+  } | null,
+) {
+  if (!task) return null;
+  if (type === "TASK_ASSIGNED") return task.assignedBy;
+  if (type === "REVIEW_SUBMITTED") return task.assignedTo;
+  if (type === "REVISION_REQUESTED" || type === "TASK_APPROVED") {
+    return task.reviews[0]?.reviewer ?? null;
+  }
+  return null;
 }
 
 export default async function NotificationsPage() {
@@ -22,17 +28,32 @@ export default async function NotificationsPage() {
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
     take: 100,
+    include: {
+      task: {
+        select: {
+          assignedBy: { select: { name: true, avatarUrl: true } },
+          assignedTo: { select: { name: true, avatarUrl: true } },
+          reviews: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { reviewer: { select: { name: true, avatarUrl: true } } },
+          },
+        },
+      },
+    },
   });
 
   const unread = notifications.filter((item) => !item.read).length;
-  const groups = ["Today", "Yesterday", "Earlier"] as const;
-  const grouped = Object.fromEntries(groups.map((label) => [label, [] as typeof notifications])) as Record<
-    (typeof groups)[number],
-    typeof notifications
-  >;
-  for (const item of notifications) {
-    grouped[groupLabel(item.createdAt)].push(item);
-  }
+  const items: NotificationListItem[] = notifications.map((item) => ({
+    id: item.id,
+    title: item.title,
+    body: item.body,
+    href: item.href,
+    read: item.read,
+    type: item.type,
+    createdAt: item.createdAt,
+    actor: actorFor(item.type, item.task),
+  }));
 
   return (
     <div className="space-y-6">
@@ -45,47 +66,7 @@ export default async function NotificationsPage() {
         }
         actions={unread > 0 ? <MarkAllButton /> : null}
       />
-
-      {notifications.length === 0 ? (
-        <Surface>
-          <EmptyState
-            title="You're all caught up."
-            description="New assignments and reviews will appear here."
-            icon={Bell}
-          />
-        </Surface>
-      ) : (
-        <div className="space-y-5">
-          {groups.map((label) => {
-            const items = grouped[label];
-            if (items.length === 0) return null;
-            return (
-              <Surface key={label} padded={false} className="overflow-hidden">
-                <div className="border-b border-border px-5 py-4">
-                  <SectionTitle
-                    title={label}
-                    description={`${items.length} notification${items.length === 1 ? "" : "s"}`}
-                  />
-                </div>
-                <div className="divide-y divide-border">
-                  {items.map((item) => (
-                    <NotificationRow
-                      key={item.id}
-                      id={item.id}
-                      href={item.href || "/notifications"}
-                      title={item.title}
-                      body={item.body}
-                      read={item.read}
-                      type={item.type}
-                      timeLabel={formatRelativeTime(item.createdAt)}
-                    />
-                  ))}
-                </div>
-              </Surface>
-            );
-          })}
-        </div>
-      )}
+      <NotificationsWorkspace items={items} />
     </div>
   );
 }
