@@ -1,30 +1,55 @@
 import {
-  addDays,
-  endOfDay,
   endOfMonth,
   format,
   formatDistanceToNow,
-  isBefore,
-  isSameDay,
   parseISO,
-  startOfDay,
   startOfMonth,
 } from "date-fns";
 
+/** Business calendar for date-only deadlines (stored as UTC midnight of YYYY-MM-DD). */
+export const CRM_TIMEZONE = "Asia/Karachi";
+
+export function calendarDateKey(date: Date = new Date(), timeZone = CRM_TIMEZONE) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+/** UTC day bounds for a calendar YYYY-MM-DD (matches `new Date("yyyy-MM-dd")` storage). */
+export function utcDayRange(dayKey: string) {
+  return {
+    start: new Date(`${dayKey}T00:00:00.000Z`),
+    end: new Date(`${dayKey}T23:59:59.999Z`),
+  };
+}
+
+export function shiftDayKey(dayKey: string, days: number) {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year!, month! - 1, day! + days));
+  return shifted.toISOString().slice(0, 10);
+}
+
+export function deadlineDayKey(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
 export function startOfToday() {
-  return startOfDay(new Date());
+  return utcDayRange(calendarDateKey()).start;
 }
 
 export function endOfToday() {
-  return endOfDay(new Date());
+  return utcDayRange(calendarDateKey()).end;
 }
 
 export function startOfTomorrow() {
-  return startOfDay(addDays(new Date(), 1));
+  return utcDayRange(shiftDayKey(calendarDateKey(), 1)).start;
 }
 
 export function endOfTomorrow() {
-  return endOfDay(addDays(new Date(), 1));
+  return utcDayRange(shiftDayKey(calendarDateKey(), 1)).end;
 }
 
 export function monthRange(year: number, month: number) {
@@ -55,18 +80,20 @@ export function formatTime(value?: Date | string | null) {
 
 export function toDateInput(value?: Date | string | null) {
   const date = asDate(value);
-  return date ? format(date, "yyyy-MM-dd") : "";
+  if (!date) return "";
+  // Date-only fields are stored as UTC midnight of the intended calendar day.
+  return deadlineDayKey(date);
 }
 
 export function isOverdue(deadline?: Date | string | null, status?: string) {
   const date = asDate(deadline);
   if (!date || status === "COMPLETED") return false;
-  return isBefore(endOfDay(date), startOfToday());
+  return deadlineDayKey(date) < calendarDateKey();
 }
 
 export function isDueToday(deadline?: Date | string | null) {
   const date = asDate(deadline);
-  return date ? isSameDay(date, new Date()) : false;
+  return date ? deadlineDayKey(date) === calendarDateKey() : false;
 }
 
 export function monthLabel(year: number, month: number) {
@@ -90,7 +117,9 @@ export function formatDateBlock(value?: Date | string | null) {
 export function formatDeadlineLabel(value?: Date | string | null) {
   const date = asDate(value);
   if (!date) return "No deadline";
-  if (isSameDay(date, new Date())) return `Today · ${format(date, "h:mm a")}`;
-  if (isSameDay(date, addDays(new Date(), 1))) return `Tomorrow · ${format(date, "h:mm a")}`;
-  return format(date, "MMM d · h:mm a");
+  const key = deadlineDayKey(date);
+  const today = calendarDateKey();
+  if (key === today) return "Today";
+  if (key === shiftDayKey(today, 1)) return "Tomorrow";
+  return format(date, "MMM d, yyyy");
 }
