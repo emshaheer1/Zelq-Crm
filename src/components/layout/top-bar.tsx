@@ -247,7 +247,7 @@ export function TopBar({
                     }}
                   >
                     <span className="mt-0.5 flex size-8 items-center justify-center rounded-lg bg-muted text-foreground">
-                      <Eye className="size-3.5" />
+                      <Bell className="size-3.5" strokeWidth={1.75} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={cn("block text-sm", item.read ? "text-muted-foreground" : "font-medium text-foreground")}>

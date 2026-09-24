@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertCircle,
+  BadgeCheck,
   Bell,
-  CalendarClock,
-  CheckCircle2,
-  Eye,
-  Flag,
-  TriangleAlert,
-  UserPlus,
+  CalendarDays,
+  ClipboardList,
+  FolderKanban,
+  RefreshCcw,
+  ScanEye,
   type LucideIcon,
 } from "lucide-react";
 import type { NotificationType } from "@prisma/client";
@@ -17,13 +18,13 @@ import { apiJson, refreshNotifications, softRefresh } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 
 const typeMeta: Record<NotificationType, { label: string; icon: LucideIcon }> = {
-  TASK_ASSIGNED: { label: "Assignment", icon: UserPlus },
-  DEADLINE_TOMORROW: { label: "Deadline", icon: CalendarClock },
-  TASK_OVERDUE: { label: "Overdue", icon: TriangleAlert },
-  REVIEW_SUBMITTED: { label: "Review", icon: Eye },
-  REVISION_REQUESTED: { label: "Revision", icon: Flag },
-  TASK_APPROVED: { label: "Approved", icon: CheckCircle2 },
-  PROJECT_DEADLINE_APPROACHING: { label: "Project", icon: CalendarClock },
+  TASK_ASSIGNED: { label: "Assignment", icon: ClipboardList },
+  DEADLINE_TOMORROW: { label: "Deadline", icon: CalendarDays },
+  TASK_OVERDUE: { label: "Overdue", icon: AlertCircle },
+  REVIEW_SUBMITTED: { label: "Review", icon: ScanEye },
+  REVISION_REQUESTED: { label: "Revision", icon: RefreshCcw },
+  TASK_APPROVED: { label: "Approved", icon: BadgeCheck },
+  PROJECT_DEADLINE_APPROACHING: { label: "Project", icon: FolderKanban },
 };
 
 export function NotificationRow({
@@ -60,51 +61,31 @@ export function NotificationRow({
           })
           .catch(() => {});
       }}
-      className={cn(
-        "group relative flex items-start gap-3.5 px-5 py-3.5 transition-colors duration-150 hover:bg-muted/60",
-        !read && "bg-[#FCFFF5]",
-      )}
+      className="flex items-start gap-3.5 px-5 py-3.5 transition-colors duration-150 hover:bg-muted/50"
     >
-      {!read ? (
-        <span className="absolute inset-y-0 left-0 w-[3px] bg-primary" aria-hidden="true" />
-      ) : null}
-
-      <span
-        className={cn(
-          "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg border",
-          read
-            ? "border-border bg-white text-muted-foreground"
-            : "border-[#d8f28a] bg-primary/20 text-[#111111]",
-        )}
-      >
-        <Icon className="size-3.5" />
+      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+        <Icon className="size-4" strokeWidth={1.75} />
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-2">
-          <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-            {meta.label}
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span
+            className={cn(
+              "text-[13px] leading-snug",
+              read ? "font-medium text-muted-foreground" : "font-semibold text-foreground",
+            )}
+          >
+            {title}
           </span>
-          {!read ? (
-            <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">
-              New
-            </span>
-          ) : null}
-        </span>
-        <span
-          className={cn(
-            "mt-1 block text-[13px] leading-snug",
-            read ? "font-medium text-muted-foreground" : "font-semibold text-foreground",
-          )}
-        >
-          {title}
+          <span className="text-[11px] text-muted-foreground">· {meta.label}</span>
         </span>
         {body ? (
           <span className="mt-0.5 block truncate text-[12px] text-muted-foreground">{body}</span>
         ) : null}
+        <span className="mt-1 block text-[11px] text-muted-foreground">{timeLabel}</span>
       </span>
 
-      <span className="shrink-0 pt-0.5 text-[11px] tabular-nums text-muted-foreground">{timeLabel}</span>
+      {!read ? <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" /> : null}
     </Link>
   );
 }
