@@ -38,7 +38,7 @@ const titles: Record<string, { title: string; description: string }> = {
   "/tasks": { title: "Tasks", description: "Manage and track your team's work." },
   "/projects": { title: "Projects", description: "Organize work by client and deadline." },
   "/clients": { title: "Clients", description: "Internal records for ZelQ projects." },
-  "/calendar": { title: "Calendar", description: "Deadlines, reviews, and meetings." },
+  "/calendar": { title: "Calendar", description: "Project tasks by date." },
   "/employees": { title: "Employees", description: "Workload and monthly work history." },
   "/reports": { title: "Reports", description: "Monthly performance and completion." },
   "/notifications": { title: "Notifications", description: "Assignments, reviews, and deadlines." },
