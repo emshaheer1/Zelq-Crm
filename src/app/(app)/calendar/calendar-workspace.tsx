@@ -237,73 +237,88 @@ export function CalendarWorkspace({
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.85fr)]">
           <Surface padded={false} className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-              <div>
-                <p className="text-[15px] font-semibold text-foreground">{project.name}</p>
-                <p className="mt-0.5 text-[13px] text-muted-foreground">{format(cursor, "MMMM yyyy")}</p>
+              <div className="min-w-0">
+                <p className="truncate text-[15px] font-semibold text-foreground">{project.name}</p>
+                <p className="mt-0.5 text-[13px] tabular-nums text-muted-foreground">
+                  {format(cursor, "MMMM yyyy")}
+                </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setCursor(new Date())}>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setCursor(new Date())}>
                   Today
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCursor((current) => addMonths(current, -1))}
-                  aria-label="Previous month"
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCursor((current) => addMonths(current, 1))}
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCursor((current) => addMonths(current, -1))}
+                    aria-label="Previous month"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCursor((current) => addMonths(current, 1))}
+                    aria-label="Next month"
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-7 border-b border-border bg-muted/40 text-[12px] font-medium text-muted-foreground">
+            <div className="grid grid-cols-7 border-b border-border bg-muted/40">
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                <div key={day} className="px-3 py-3">
+                <div
+                  key={day}
+                  className="border-r border-border py-2.5 text-center text-[11px] font-semibold tracking-wide text-muted-foreground uppercase last:border-r-0"
+                >
                   {day}
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7">
-              {days.map((day) => {
+            <div className="grid grid-cols-7 [&>button]:min-h-[112px] sm:[&>button]:min-h-[124px]">
+              {days.map((day, index) => {
                 const chips = chipsForDay(day);
                 const today = isSameDay(day, new Date());
                 const active = selectedDay ? isSameDay(day, selectedDay) : false;
+                const inMonth = isSameMonth(day, cursor);
+                const isLastCol = (index + 1) % 7 === 0;
+
                 return (
                   <button
                     key={day.toISOString()}
                     type="button"
                     onClick={() => setSelectedDay(day)}
                     className={cn(
-                      "min-h-28 border-r border-b border-border p-2 text-left last:border-r-0 transition-colors hover:bg-muted/40 sm:min-h-32",
-                      !isSameMonth(day, cursor) && "bg-muted/20 text-muted-foreground",
-                      active && "bg-primary/10",
+                      "flex h-full flex-col border-b border-border p-0 text-left transition-colors",
+                      !isLastCol && "border-r",
+                      !inMonth && "bg-[#F8FAFC]",
+                      inMonth && "bg-white hover:bg-muted/30",
+                      active && "bg-primary/10 ring-2 ring-inset ring-primary",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "mb-2 inline-flex size-7 items-center justify-center rounded-lg text-xs font-semibold",
-                        today && "bg-primary text-primary-foreground",
-                        !today && active && "bg-secondary text-secondary-foreground",
-                        !today && !active && "text-muted-foreground",
-                      )}
-                    >
-                      {format(day, "d")}
-                    </span>
-                    <div className="space-y-1">
+                    <div className="flex h-8 shrink-0 items-center justify-end px-1.5 pt-1">
+                      <span
+                        className={cn(
+                          "inline-flex size-7 items-center justify-center rounded-full text-[12px] font-semibold tabular-nums",
+                          today && "bg-primary text-primary-foreground",
+                          !today && active && "bg-secondary text-secondary-foreground",
+                          !today && !active && inMonth && "text-foreground",
+                          !today && !active && !inMonth && "text-muted-foreground/50",
+                        )}
+                      >
+                        {format(day, "d")}
+                      </span>
+                    </div>
+                    <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-hidden px-1 pb-1.5">
                       {chips.slice(0, 3).map((chip) => (
                         <span
                           key={chip.id}
                           className={cn(
-                            "block w-full truncate rounded-md px-1.5 py-1 text-[11px] font-medium",
+                            "block h-5 shrink-0 truncate rounded px-1 text-[10px] leading-5 font-medium sm:text-[11px]",
                             chipTone[chip.tone],
                           )}
                           title={chip.label}
@@ -312,7 +327,7 @@ export function CalendarWorkspace({
                         </span>
                       ))}
                       {chips.length > 3 ? (
-                        <span className="px-1 text-[10px] text-muted-foreground">
+                        <span className="h-4 shrink-0 px-1 text-[10px] leading-4 text-muted-foreground">
                           +{chips.length - 3} more
                         </span>
                       ) : null}
