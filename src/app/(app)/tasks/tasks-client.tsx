@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useInstantData } from "@/lib/instant-data";
 import { TasksWorkspace } from "./tasks-workspace";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 
 type BootTasks = {
   tasks: Parameters<typeof TasksWorkspace>[0]["tasks"];
@@ -15,14 +15,10 @@ type BootTasks = {
 
 export function TasksClient() {
   const params = useSearchParams();
-  const { data, loading } = useInstantData<BootTasks>("tasks", "/api/boot/tasks");
+  const { data } = useInstantData<BootTasks>("tasks", "/api/boot/tasks");
 
   if (!data) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Tasks" description={loading ? "Loading tasks…" : "Could not load tasks."} />
-      </div>
-    );
+    return <PageSkeleton stats={0} panels={1} />;
   }
 
   return (

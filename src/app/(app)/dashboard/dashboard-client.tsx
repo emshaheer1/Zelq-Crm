@@ -33,6 +33,7 @@ import {
 import { formatDate, formatDateBlock, formatDeadlineLabel, isOverdue } from "@/lib/dates";
 import { useInstantData } from "@/lib/instant-data";
 import type { DashboardInsights } from "@/server/queries";
+import { PageSkeleton } from "@/components/shared/page-skeleton";
 
 type TaskRow = {
   id: string;
@@ -105,14 +106,10 @@ type BootPayload =
     };
 
 export function DashboardClient() {
-  const { data, loading } = useInstantData<BootPayload>("dashboard", "/api/boot/dashboard");
+  const { data } = useInstantData<BootPayload>("dashboard", "/api/boot/dashboard");
 
   if (!data) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Dashboard" description={loading ? "Loading your workspace…" : "Could not load dashboard."} />
-      </div>
-    );
+    return <PageSkeleton stats={5} panels={2} />;
   }
 
   if (data.kind === "employee") {
