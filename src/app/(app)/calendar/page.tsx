@@ -13,46 +13,46 @@ export default async function CalendarPage({
   const staff = isStaff(user.role);
   const [projectWhere, taskWhere] = await Promise.all([projectScope(user), taskScope(user)]);
 
-  const [projects, tasks] = await Promise.all([
-    prisma.project.findMany({
-      where: projectWhere,
-      select: {
-        id: true,
-        name: true,
-        status: true,
-        deadline: true,
-        client: { select: { id: true, name: true } },
-      },
-      orderBy: { name: "asc" },
-    }),
-    prisma.task.findMany({
-      where: {
-        AND: [
-          taskWhere,
-          {
-            OR: [{ deadline: { not: null } }, { startDate: { not: null } }],
-          },
-        ],
-      },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        priority: true,
-        startDate: true,
-        deadline: true,
-        projectId: true,
-        assignedTo: { select: { id: true, name: true, avatarUrl: true } },
-        project: { select: { id: true, name: true } },
-      },
-      orderBy: [{ deadline: "asc" }, { startDate: "asc" }],
-    }),
-  ]);
+  const projects = await prisma.project.findMany({
+    where: projectWhere,
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      deadline: true,
+      client: { select: { id: true, name: true } },
+    },
+    orderBy: { name: "asc" },
+  });
 
   const selectedProjectId =
     params.project && projects.some((project) => project.id === params.project)
       ? params.project
       : projects[0]?.id ?? "";
+
+  const tasks = selectedProjectId
+    ? await prisma.task.findMany({
+        where: {
+          AND: [
+            taskWhere,
+            { projectId: selectedProjectId },
+            { OR: [{ deadline: { not: null } }, { startDate: { not: null } }] },
+          ],
+        },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+          startDate: true,
+          deadline: true,
+          projectId: true,
+          assignedTo: { select: { id: true, name: true, avatarUrl: true } },
+          project: { select: { id: true, name: true } },
+        },
+        orderBy: [{ deadline: "asc" }, { startDate: "asc" }],
+      })
+    : [];
 
   return (
     <CalendarWorkspace

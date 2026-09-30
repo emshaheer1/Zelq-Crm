@@ -18,10 +18,21 @@ export async function apiJson<T = { ok?: boolean; id?: string; error?: string }>
   return result;
 }
 
-/** Soft-refresh the current page (no full browser reload). */
+/** Soft-refresh: update client caches + current RSC (mutations only). */
 export function softRefresh() {
   if (typeof window === "undefined") return;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith("zelq:")) keys.push(key);
+    }
+    keys.forEach((key) => sessionStorage.removeItem(key));
+  } catch {
+    // ignore
+  }
   window.dispatchEvent(new Event("zelq:refresh"));
+  window.dispatchEvent(new Event("zelq:data"));
 }
 
 /** Ask the shell to reload the notification bell immediately. */

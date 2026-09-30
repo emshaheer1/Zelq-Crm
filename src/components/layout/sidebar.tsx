@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   Bell,
@@ -44,6 +44,7 @@ export function Sidebar({
   unread: number;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const staff = user.role !== "EMPLOYEE";
 
   return (
@@ -56,19 +57,19 @@ export function Sidebar({
           {workLinks
             .filter((link) => staff || link.href !== "/clients")
             .map((link) => (
-              <NavLink key={link.href} {...link} pathname={pathname} unread={unread} />
+              <NavLink key={link.href} {...link} pathname={pathname} unread={unread} onWarm={() => router.prefetch(link.href)} />
             ))}
         </NavGroup>
         {staff ? (
           <NavGroup title="Manage">
             {manageLinks.map((link) => (
-              <NavLink key={link.href} {...link} pathname={pathname} unread={unread} />
+              <NavLink key={link.href} {...link} pathname={pathname} unread={unread} onWarm={() => router.prefetch(link.href)} />
             ))}
           </NavGroup>
         ) : null}
         <NavGroup title="Account">
           {accountLinks.map((link) => (
-            <NavLink key={link.href} {...link} pathname={pathname} unread={unread} />
+            <NavLink key={link.href} {...link} pathname={pathname} unread={unread} onWarm={() => router.prefetch(link.href)} />
           ))}
         </NavGroup>
       </nav>
@@ -93,12 +94,14 @@ function NavLink({
   icon: Icon,
   pathname,
   unread,
+  onWarm,
 }: {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
   pathname: string;
   unread: number;
+  onWarm: () => void;
 }) {
   const active = pathname === href || pathname.startsWith(`${href}/`);
 
@@ -106,6 +109,8 @@ function NavLink({
     <Link
       href={href}
       prefetch
+      onMouseEnter={onWarm}
+      onFocus={onWarm}
       className={cn(
         "relative flex h-9 items-center gap-3 rounded-lg px-3 text-xs font-medium transition-colors duration-150",
         active ? "bg-sidebar-accent text-white" : "text-white/60 hover:bg-white/5 hover:text-white",
