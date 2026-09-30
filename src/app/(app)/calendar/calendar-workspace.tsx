@@ -15,6 +15,7 @@ import {
 } from "date-fns";
 import {
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Flag,
@@ -56,7 +57,7 @@ type ProjectItem = {
 type DayChip = {
   id: string;
   label: string;
-  tone: "start" | "due" | "overdue" | "delivery";
+  tone: "start" | "due" | "overdue" | "done" | "delivery";
   href: string;
 };
 
@@ -64,6 +65,7 @@ const chipTone: Record<DayChip["tone"], string> = {
   start: "bg-[#EFF8FF] text-[#175CD3]",
   due: "bg-[#FFFAEB] text-[#B54708]",
   overdue: "bg-[#FEF3F2] text-[#B42318]",
+  done: "bg-[#ECFDF3] text-[#027A48]",
   delivery: "bg-primary/20 text-[#111111]",
 };
 
@@ -121,6 +123,23 @@ export function CalendarWorkspace({
     for (const task of projectTasks) {
       const deadline = asDate(task.deadline);
       const start = asDate(task.startDate);
+      const completed = task.status === "COMPLETED";
+
+      // Completed work is green — never blue "Start".
+      if (completed) {
+        const onDeadline = deadline && isSameDay(deadline, day);
+        const onStart = start && isSameDay(start, day);
+        if (onDeadline || (!deadline && onStart)) {
+          chips.push({
+            id: `${task.id}-done`,
+            label: task.title,
+            tone: "done",
+            href: `/tasks/${task.id}`,
+          });
+        }
+        continue;
+      }
+
       if (start && isSameDay(start, day)) {
         chips.push({
           id: `${task.id}-start`,
@@ -207,6 +226,7 @@ export function CalendarWorkspace({
             <LegendSwatch className="bg-[#EFF8FF] text-[#175CD3]" icon={Play} label="Start" />
             <LegendSwatch className="bg-[#FFFAEB] text-[#B54708]" icon={Flag} label="Due" />
             <LegendSwatch className="bg-[#FEF3F2] text-[#B42318]" icon={TriangleAlert} label="Overdue" />
+            <LegendSwatch className="bg-[#ECFDF3] text-[#027A48]" icon={CheckCircle2} label="Done" />
             <LegendSwatch className="bg-primary/20 text-[#111111]" icon={FolderKanban} label="Delivery" />
           </div>
         ) : null}
@@ -350,12 +370,16 @@ export function CalendarWorkspace({
                 {dayTasks.map((task) => {
                   const start = asDate(task.startDate);
                   const deadline = asDate(task.deadline);
+                  const completed = task.status === "COMPLETED";
                   const showStart =
+                    !completed &&
                     Boolean(start) &&
                     (!selectedDay || isSameDay(start!, selectedDay));
                   const showDue =
+                    !completed &&
                     Boolean(deadline) &&
                     (!selectedDay || isSameDay(deadline!, selectedDay));
+                  const showDone = completed;
                   const overdue = isOverdue(task.deadline, task.status);
 
                   return (
@@ -367,6 +391,11 @@ export function CalendarWorkspace({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
+                          {showDone ? (
+                            <span className="rounded-md bg-[#ECFDF3] px-1.5 py-0.5 text-[10px] font-semibold text-[#027A48]">
+                              Done
+                            </span>
+                          ) : null}
                           {showStart ? (
                             <span className="rounded-md bg-[#EFF8FF] px-1.5 py-0.5 text-[10px] font-semibold text-[#175CD3]">
                               Start
