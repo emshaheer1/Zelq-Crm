@@ -122,40 +122,37 @@ export function CalendarWorkspace({
 
     for (const task of projectTasks) {
       const deadline = asDate(task.deadline);
-      const start = asDate(task.startDate);
-      const completed = task.status === "COMPLETED";
+      if (!deadline || !isSameDay(deadline, day)) continue;
 
-      // Completed work is green — never blue "Start".
-      if (completed) {
-        const onDeadline = deadline && isSameDay(deadline, day);
-        const onStart = start && isSameDay(start, day);
-        if (onDeadline || (!deadline && onStart)) {
-          chips.push({
-            id: `${task.id}-done`,
-            label: task.title,
-            tone: "done",
-            href: `/tasks/${task.id}`,
-          });
-        }
+      // Completed → green Done
+      if (task.status === "COMPLETED") {
+        chips.push({
+          id: `${task.id}-done`,
+          label: task.title,
+          tone: "done",
+          href: `/tasks/${task.id}`,
+        });
         continue;
       }
 
-      if (start && isSameDay(start, day)) {
+      // Employee actually started → blue In progress
+      if (task.status === "IN_PROGRESS") {
         chips.push({
           id: `${task.id}-start`,
           label: task.title,
           tone: "start",
           href: `/tasks/${task.id}`,
         });
+        continue;
       }
-      if (deadline && isSameDay(deadline, day)) {
-        chips.push({
-          id: `${task.id}-due`,
-          label: task.title,
-          tone: isOverdue(task.deadline, task.status) ? "overdue" : "due",
-          href: `/tasks/${task.id}`,
-        });
-      }
+
+      // Still PENDING (or other open) → Due / Overdue only — never Start
+      chips.push({
+        id: `${task.id}-due`,
+        label: task.title,
+        tone: isOverdue(task.deadline, task.status) ? "overdue" : "due",
+        href: `/tasks/${task.id}`,
+      });
     }
     return chips;
   };
@@ -163,11 +160,7 @@ export function CalendarWorkspace({
   const dayTasks = selectedDay
     ? projectTasks.filter((task) => {
         const deadline = asDate(task.deadline);
-        const start = asDate(task.startDate);
-        return (
-          (deadline && isSameDay(deadline, selectedDay)) ||
-          (start && isSameDay(start, selectedDay))
-        );
+        return Boolean(deadline && isSameDay(deadline, selectedDay));
       })
     : projectTasks;
 
@@ -182,7 +175,7 @@ export function CalendarWorkspace({
     <div className="space-y-6">
       <PageHeader
         title="Calendar"
-        description="Select a project to view its task starts and deadlines."
+        description="Select a project to track deadlines — pending stays due/overdue until the employee starts."
       />
 
       <Surface>
@@ -223,7 +216,7 @@ export function CalendarWorkspace({
               {project.deadline ? ` · Delivery ${formatDate(project.deadline)}` : null}
             </p>
             <span className="hidden h-3 w-px bg-border sm:block" />
-            <LegendSwatch className="bg-[#EFF8FF] text-[#175CD3]" icon={Play} label="Start" />
+            <LegendSwatch className="bg-[#EFF8FF] text-[#175CD3]" icon={Play} label="In progress" />
             <LegendSwatch className="bg-[#FFFAEB] text-[#B54708]" icon={Flag} label="Due" />
             <LegendSwatch className="bg-[#FEF3F2] text-[#B42318]" icon={TriangleAlert} label="Overdue" />
             <LegendSwatch className="bg-[#ECFDF3] text-[#027A48]" icon={CheckCircle2} label="Done" />
@@ -368,18 +361,9 @@ export function CalendarWorkspace({
             ) : (
               <div className="divide-y divide-border">
                 {dayTasks.map((task) => {
-                  const start = asDate(task.startDate);
                   const deadline = asDate(task.deadline);
                   const completed = task.status === "COMPLETED";
-                  const showStart =
-                    !completed &&
-                    Boolean(start) &&
-                    (!selectedDay || isSameDay(start!, selectedDay));
-                  const showDue =
-                    !completed &&
-                    Boolean(deadline) &&
-                    (!selectedDay || isSameDay(deadline!, selectedDay));
-                  const showDone = completed;
+                  const inProgress = task.status === "IN_PROGRESS";
                   const overdue = isOverdue(task.deadline, task.status);
 
                   return (
@@ -391,17 +375,17 @@ export function CalendarWorkspace({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {showDone ? (
+                          {completed ? (
                             <span className="rounded-md bg-[#ECFDF3] px-1.5 py-0.5 text-[10px] font-semibold text-[#027A48]">
                               Done
                             </span>
                           ) : null}
-                          {showStart ? (
+                          {inProgress ? (
                             <span className="rounded-md bg-[#EFF8FF] px-1.5 py-0.5 text-[10px] font-semibold text-[#175CD3]">
-                              Start
+                              In progress
                             </span>
                           ) : null}
-                          {showDue ? (
+                          {!completed && !inProgress ? (
                             <span
                               className={cn(
                                 "rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
@@ -428,9 +412,7 @@ export function CalendarWorkspace({
                           <StatusBadge value={task.status as never} />
                         </div>
                         <p className="mt-1.5 text-[11px] text-muted-foreground">
-                          {task.startDate ? `Start ${formatDate(task.startDate)}` : null}
-                          {task.startDate && task.deadline ? " · " : null}
-                          {task.deadline ? `Due ${formatDate(task.deadline)}` : null}
+                          {deadline ? `Due ${formatDate(task.deadline)}` : null}
                         </p>
                       </div>
                     </button>
