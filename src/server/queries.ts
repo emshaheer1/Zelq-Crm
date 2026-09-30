@@ -121,60 +121,57 @@ export async function getTeamWorkload() {
       role: true,
       designation: true,
       avatarUrl: true,
-      assignedTasks: { select: { id: true, status: true, completedAt: true, deadline: true } },
-      createdTasks: { select: { id: true, status: true, completedAt: true, deadline: true } },
     },
   });
 
+  if (users.length === 0) return [];
+
+  const ids = users.map((user) => user.id);
   const month = monthRange(new Date().getFullYear(), new Date().getMonth() + 1);
+  const today = startOfToday();
+
+  const tasks = await prisma.task.findMany({
+    where: {
+      OR: [{ assignedToId: { in: ids } }, { assignedById: { in: ids } }],
+    },
+    select: {
+      id: true,
+      status: true,
+      completedAt: true,
+      deadline: true,
+      assignedToId: true,
+      assignedById: true,
+    },
+  });
 
   return users.map((user) => {
-    const tasks = workloadTasks(user);
+    const relevant =
+      user.role === "MANAGER" || user.role === "ADMIN"
+        ? tasks.filter((task) => task.assignedById === user.id || task.assignedToId === user.id)
+        : tasks.filter((task) => task.assignedToId === user.id);
+    const unique = [...new Map(relevant.map((task) => [task.id, task])).values()];
+
     return {
       id: user.id,
       name: user.name,
       designation: user.designation,
       avatarUrl: user.avatarUrl,
-      active: tasks.filter((task) =>
+      active: unique.filter((task) =>
         ["IN_PROGRESS", "READY_FOR_REVIEW", "REVISION_REQUIRED"].includes(task.status),
       ).length,
-      pending: tasks.filter((task) => task.status === "PENDING").length,
-      completed: tasks.filter(
+      pending: unique.filter((task) => task.status === "PENDING").length,
+      completed: unique.filter(
         (task) =>
           task.status === "COMPLETED" &&
           task.completedAt &&
           task.completedAt >= month.start &&
           task.completedAt <= month.end,
       ).length,
-      overdue: tasks.filter(
-        (task) =>
-          task.status !== "COMPLETED" &&
-          task.deadline &&
-          task.deadline < startOfToday(),
+      overdue: unique.filter(
+        (task) => task.status !== "COMPLETED" && task.deadline && task.deadline < today,
       ).length,
     };
   });
-}
-
-type WorkloadTask = {
-  id: string;
-  status: string;
-  completedAt: Date | null;
-  deadline: Date | null;
-};
-
-/** Managers get credit for tasks they assign; employees for tasks assigned to them. */
-function workloadTasks(user: {
-  role: string;
-  assignedTasks: WorkloadTask[];
-  createdTasks: WorkloadTask[];
-}) {
-  if (user.role === "MANAGER" || user.role === "ADMIN") {
-    const map = new Map(user.createdTasks.map((task) => [task.id, task]));
-    for (const task of user.assignedTasks) map.set(task.id, task);
-    return [...map.values()];
-  }
-  return user.assignedTasks;
 }
 
 export async function getUpcomingWork(user: AuthUser) {
@@ -409,9 +406,18 @@ function pushPerson(
 export async function getDashboardInsights(user: AuthUser): Promise<DashboardInsights> {
   const scope = await taskScope(user);
   const today = startOfToday();
+  const month = monthRange(new Date().getFullYear(), new Date().getMonth() + 1);
 
+  // Skip old completed work — keeps dashboard insights fast as history grows.
   const tasks = await prisma.task.findMany({
-    where: scope,
+    where: {
+      AND: [
+        scope,
+        {
+          OR: [{ status: { not: "COMPLETED" } }, { completedAt: { gte: month.start } }],
+        },
+      ],
+    },
     select: {
       status: true,
       priority: true,

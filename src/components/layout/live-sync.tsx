@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export type LiveNotice = {
   id: string;
@@ -16,46 +16,69 @@ type Props = {
   onData: (data: { unread: number; notifications: LiveNotice[] }) => void;
 };
 
+const POLL_MS = 4000;
+
 export function LiveSync({ onData }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const onDataRef = useRef(onData);
+  const syncKeyRef = useRef<string | null>(null);
+  const refreshTimer = useRef<number | null>(null);
   onDataRef.current = onData;
 
-  const pullNotifications = useCallback(async () => {
-    const response = await fetch("/api/notifications", { cache: "no-store" }).catch(() => null);
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
+    refreshTimer.current = window.setTimeout(() => {
+      router.refresh();
+    }, 250);
+  }, [router]);
+
+  const pullLive = useCallback(async () => {
+    const response = await fetch("/api/live", { cache: "no-store" }).catch(() => null);
     if (!response?.ok) return;
     const data = (await response.json().catch(() => null)) as {
+      syncKey?: string;
       unread?: number;
       notifications?: LiveNotice[];
     } | null;
     if (!data) return;
+
     onDataRef.current({
       unread: data.unread ?? 0,
       notifications: data.notifications ?? [],
     });
-  }, []);
+
+    const nextKey = data.syncKey ?? "";
+    if (syncKeyRef.current === null) {
+      syncKeyRef.current = nextKey;
+      return;
+    }
+    if (nextKey && nextKey !== syncKeyRef.current) {
+      syncKeyRef.current = nextKey;
+      scheduleRefresh();
+    }
+  }, [scheduleRefresh]);
 
   useEffect(() => {
-    void pullNotifications();
+    void pullLive();
 
     const onSoftRefresh = () => {
-      router.refresh();
-      void pullNotifications();
+      scheduleRefresh();
+      void pullLive();
     };
     const onNotices = () => {
-      void pullNotifications();
+      void pullLive();
     };
 
     window.addEventListener("zelq:refresh", onSoftRefresh);
     window.addEventListener("zelq:notifications", onNotices);
 
-    // Poll bell only — do not router.refresh() here (that re-ran every heavy page query).
     const timer = window.setInterval(() => {
-      void pullNotifications();
-    }, 15000);
+      void pullLive();
+    }, POLL_MS);
 
     const onVisible = () => {
-      if (document.visibilityState === "visible") void pullNotifications();
+      if (document.visibilityState === "visible") void pullLive();
     };
     document.addEventListener("visibilitychange", onVisible);
 
@@ -64,8 +87,15 @@ export function LiveSync({ onData }: Props) {
       window.removeEventListener("zelq:notifications", onNotices);
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
+      if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
     };
-  }, [pullNotifications, router]);
+  }, [pullLive, scheduleRefresh]);
+
+  // Re-baseline sync key when the route changes so we don't double-refresh.
+  useEffect(() => {
+    syncKeyRef.current = null;
+    void pullLive();
+  }, [pathname, pullLive]);
 
   return null;
 }

@@ -13,7 +13,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import type { Prisma } from "@prisma/client";
+import type { EventType } from "@prisma/client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -26,11 +26,36 @@ import { eventTypeLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { asDate } from "@/lib/dates";
 
-type TaskItem = Prisma.TaskGetPayload<{ include: { assignedTo: true; project: true } }>;
-type ProjectItem = Prisma.ProjectGetPayload<{ include: { client: true } }>;
-type EventItem = Prisma.CalendarEventGetPayload<{
-  include: { project: true; client: true; assignees: { include: { user: true } } };
-}>;
+type TaskItem = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  deadline: Date | string | null;
+  assignedTo: { id: string; name: string; avatarUrl: string | null };
+  project: { id: string; name: string };
+};
+type ProjectItem = {
+  id: string;
+  name: string;
+  status: string;
+  deadline: Date | string | null;
+  client: { id: string; name: string };
+};
+type EventItem = {
+  id: string;
+  title: string;
+  type: EventType;
+  date: Date | string;
+  time: string | null;
+  description: string | null;
+  priority: string;
+  projectId: string | null;
+  clientId: string | null;
+  project: { id: string; name: string } | null;
+  client: { id: string; name: string } | null;
+  assignees: { userId: string; user: { id: string; name: string; avatarUrl: string | null } }[];
+};
 
 export function CalendarWorkspace({
   tasks,

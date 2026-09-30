@@ -16,17 +16,19 @@ export default async function ReportsPage({
   const month = Number(query.month) || now.getMonth() + 1;
   const range = monthRange(year, month);
 
-  const [employees, projects, monthTasks, allProjects] = await Promise.all([
+  const [employees, projects, monthTasks] = await Promise.all([
     prisma.user.findMany({
       where: { role: { not: "ADMIN" } },
       orderBy: { name: "asc" },
+      select: { id: true, name: true, role: true },
     }),
     prisma.project.findMany({
-      include: {
-        client: true,
-        manager: true,
-        members: { include: { user: true } },
-        tasks: true,
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        members: { select: { user: { select: { name: true } } } },
+        tasks: { select: { status: true, deadline: true } },
       },
       orderBy: { name: "asc" },
     }),
@@ -38,9 +40,17 @@ export default async function ReportsPage({
           { deadline: { gte: range.start, lte: range.end } },
         ],
       },
-      include: { project: true, assignedTo: true },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        deadline: true,
+        projectId: true,
+        assignedToId: true,
+        assignedById: true,
+        project: { select: { name: true } },
+      },
     }),
-    prisma.project.findMany({ include: { tasks: true } }),
   ]);
 
   const selectedEmployee = employees.find((employee) => employee.id === query.employee) ?? employees[0];
@@ -132,10 +142,10 @@ export default async function ReportsPage({
         completed: companyCompleted,
         pending: companyPending,
         overdue: companyOverdue,
-        activeProjects: allProjects.filter((project) =>
+        activeProjects: projects.filter((project) =>
           ["NOT_STARTED", "IN_PROGRESS"].includes(project.status),
         ).length,
-        completedProjects: allProjects.filter((project) => project.status === "COMPLETED").length,
+        completedProjects: projects.filter((project) => project.status === "COMPLETED").length,
         employees: companyEmployees,
       }}
     />
