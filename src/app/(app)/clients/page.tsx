@@ -1,11 +1,30 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/shared/page-skeleton";
-import { ClientsClient } from "./clients-client";
+import { prisma } from "@/lib/prisma";
+import { requireStaff } from "@/lib/permissions";
+import { ClientsWorkspace } from "./clients-workspace";
 
-export default function ClientsPage() {
-  return (
-    <Suspense fallback={<PageSkeleton stats={0} panels={1} />}>
-      <ClientsClient />
-    </Suspense>
-  );
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>;
+}) {
+  await requireStaff();
+  const params = await searchParams;
+  const clients = await prisma.client.findMany({
+    select: {
+      id: true,
+      name: true,
+      companyName: true,
+      email: true,
+      status: true,
+      logoUrl: true,
+      updatedAt: true,
+      _count: { select: { projects: true } },
+    },
+    orderBy: { name: "asc" },
+  }).catch((error) => {
+    console.error("clients.page", error);
+    return [];
+  });
+
+  return <ClientsWorkspace clients={clients} openCreate={params.new === "1"} />;
 }

@@ -32,7 +32,7 @@ type ProjectItem = {
   managerId: string;
   status: ProjectStatus;
   priority: Priority;
-  deadline: Date | string | null;
+  deadline: Date | null;
   client: { id: string; name: string; companyName: string | null };
   members: {
     id: string;

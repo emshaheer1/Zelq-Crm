@@ -1,11 +1,65 @@
-import { Suspense } from "react";
-import { PageSkeleton } from "@/components/shared/page-skeleton";
-import { CalendarClient } from "./calendar-client";
+import { prisma } from "@/lib/prisma";
+import { isStaff, requireUser } from "@/lib/permissions";
+import { projectScope, taskScope } from "@/server/queries";
+import { CalendarWorkspace } from "./calendar-workspace";
 
-export default function CalendarPage() {
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string }>;
+}) {
+  const user = await requireUser();
+  const params = await searchParams;
+  const staff = isStaff(user.role);
+  const [projectWhere, taskWhere] = await Promise.all([projectScope(user), taskScope(user)]);
+
+  const projects = await prisma.project.findMany({
+    where: projectWhere,
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      deadline: true,
+      client: { select: { id: true, name: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  const selectedProjectId =
+    params.project && projects.some((project) => project.id === params.project)
+      ? params.project
+      : projects[0]?.id ?? "";
+
+  const tasks = selectedProjectId
+    ? await prisma.task.findMany({
+        where: {
+          AND: [
+            taskWhere,
+            { projectId: selectedProjectId },
+            { OR: [{ deadline: { not: null } }, { startDate: { not: null } }] },
+          ],
+        },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+          startDate: true,
+          deadline: true,
+          projectId: true,
+          assignedTo: { select: { id: true, name: true, avatarUrl: true } },
+          project: { select: { id: true, name: true } },
+        },
+        orderBy: [{ deadline: "asc" }, { startDate: "asc" }],
+      })
+    : [];
+
   return (
-    <Suspense fallback={<PageSkeleton stats={0} panels={2} />}>
-      <CalendarClient />
-    </Suspense>
+    <CalendarWorkspace
+      projects={projects}
+      tasks={tasks}
+      selectedProjectId={selectedProjectId}
+      canCreate={staff}
+    />
   );
 }
