@@ -30,10 +30,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDate, formatDateBlock, formatDeadlineLabel, isOverdue } from "@/lib/dates";
+import { formatDate, formatDateBlock, formatDeadlineLabel, isOverdue, monthLabel } from "@/lib/dates";
 import { useInstantData } from "@/lib/instant-data";
 import type { DashboardInsights } from "@/server/queries";
 import { PageSkeleton } from "@/components/shared/page-skeleton";
+import { AppSelect } from "@/components/ui/app-select";
+import { fieldSelectClass } from "@/lib/styles";
+import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
 
 type TaskRow = {
   id: string;
@@ -46,25 +50,31 @@ type TaskRow = {
   assignedTo: { name: string; avatarUrl: string | null };
 };
 
+type PeriodInfo = { year: number; month: number; isCurrent: boolean };
+
 type BootPayload =
   | {
       kind: "employee";
+      period: PeriodInfo;
       user: { id: string; name: string; avatarUrl: string | null };
       data: {
         today: TaskRow[];
         upcoming: TaskRow[];
         review: TaskRow[];
         revision: TaskRow[];
+        completed?: TaskRow[];
         stats: {
           waitingForReview: number;
           overdueTasks: number;
           completedThisMonth: number;
+          tasksToday?: number;
         };
       };
       insights: DashboardInsights;
     }
   | {
       kind: "staff";
+      period: PeriodInfo;
       user: { id: string; name: string; avatarUrl: string | null };
       stats: {
         activeProjects: number;
@@ -105,12 +115,74 @@ type BootPayload =
       insights: DashboardInsights;
     };
 
+function MonthPicker({
+  year,
+  month,
+  onChange,
+}: {
+  year: number;
+  month: number;
+  onChange: (next: { year: number; month: number }) => void;
+}) {
+  const years = useMemo(() => {
+    const current = new Date().getFullYear();
+    return [current - 1, current, current + 1];
+  }, []);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <AppSelect
+        className={cn(fieldSelectClass, "h-9 w-[140px]")}
+        value={month}
+        onChange={(event) => onChange({ year, month: Number(event.target.value) })}
+      >
+        {Array.from({ length: 12 }, (_, index) => (
+          <option key={index + 1} value={index + 1}>
+            {new Date(2026, index, 1).toLocaleString("en", { month: "long" })}
+          </option>
+        ))}
+      </AppSelect>
+      <AppSelect
+        className={cn(fieldSelectClass, "h-9 w-[100px]")}
+        value={year}
+        onChange={(event) => onChange({ year: Number(event.target.value), month })}
+      >
+        {years.map((value) => (
+          <option key={value} value={value}>
+            {value}
+          </option>
+        ))}
+      </AppSelect>
+    </div>
+  );
+}
+
 export function DashboardClient() {
-  const { data } = useInstantData<BootPayload>("dashboard", "/api/boot/dashboard");
+  const now = new Date();
+  const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
+  const cacheKey = `dashboard:${period.year}-${period.month}`;
+  const url = `/api/boot/dashboard?year=${period.year}&month=${period.month}`;
+  const { data } = useInstantData<BootPayload>(cacheKey, url);
 
   if (!data) {
     return <PageSkeleton stats={5} panels={2} />;
   }
+
+  const isCurrent = data.period?.isCurrent ?? true;
+  const label = monthLabel(period.year, period.month);
+  const dueLabel = isCurrent ? "Tasks Today" : "Due this month";
+  const completedLabel = isCurrent ? "Completed This Month" : `Completed · ${label}`;
+  const todayTitle = isCurrent ? "Today's Tasks" : `Tasks in ${label}`;
+  const todayDescription = isCurrent
+    ? "Tasks assigned for today and who they're assigned to."
+    : `Work with deadlines or completions in ${label}.`;
+
+  const monthActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <MonthPicker year={period.year} month={period.month} onChange={setPeriod} />
+      {data.kind === "staff" ? <CreateButton kind="task">New Task</CreateButton> : null}
+    </div>
+  );
 
   if (data.kind === "employee") {
     const open =
@@ -128,15 +200,16 @@ export function DashboardClient() {
       <div className="space-y-6">
         <PageHeader
           title={`Hello, ${data.user.name.split(" ")[0]}`}
-          description="What do you need to work on right now?"
+          description={`${label} · What do you need to work on?`}
+          actions={monthActions}
         />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard icon={ListTodo} label="Tasks Today" value={data.data.today.length} tone="orange" />
+          <StatCard icon={ListTodo} label={dueLabel} value={data.data.today.length} tone="orange" />
           <StatCard icon={Eye} label="Waiting for Review" value={data.data.stats.waitingForReview} tone="purple" />
           <StatCard icon={TriangleAlert} label="Overdue" value={data.data.stats.overdueTasks} tone="red" />
           <StatCard
             icon={CircleCheckBig}
-            label="Completed This Month"
+            label={completedLabel}
             value={data.data.stats.completedThisMonth}
             tone="green"
           />
@@ -144,11 +217,24 @@ export function DashboardClient() {
         <WorkChart rows={workRows} />
         <WorkInsights data={data.insights} />
         <div className="grid gap-6 xl:grid-cols-[1.65fr_0.85fr]">
-          <TodayList tasks={data.data.today} />
-          <Section title="Upcoming" description="What's next on your list." items={data.data.upcoming} empty="Nothing upcoming." />
+          <TodayList tasks={data.data.today} title={todayTitle} description={todayDescription} />
+          {isCurrent ? (
+            <Section title="Upcoming" description="What's next on your list." items={data.data.upcoming} empty="Nothing upcoming." />
+          ) : (
+            <Section
+              title="Completed"
+              description={`Finished in ${label}.`}
+              items={data.data.completed ?? []}
+              empty={`No completed tasks in ${label}.`}
+            />
+          )}
         </div>
-        <Section title="Waiting for Review" items={data.data.review} empty="No tasks waiting for review." />
-        <Section title="Revision Required" items={data.data.revision} empty="No revisions right now." />
+        {isCurrent ? (
+          <>
+            <Section title="Waiting for Review" items={data.data.review} empty="No tasks waiting for review." />
+            <Section title="Revision Required" items={data.data.revision} empty="No revisions right now." />
+          </>
+        ) : null}
       </div>
     );
   }
@@ -168,14 +254,14 @@ export function DashboardClient() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Overview of your team's workload and current projects."
-        actions={<CreateButton kind="task">New Task</CreateButton>}
+        description={`${label} · Overview of your team's workload and projects.`}
+        actions={monthActions}
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard icon={FolderKanban} label="Active Projects" value={data.stats.activeProjects} tone="blue" />
-        <StatCard icon={ListTodo} label="Tasks Today" value={data.stats.tasksToday} tone="orange" />
+        <StatCard icon={ListTodo} label={dueLabel} value={data.stats.tasksToday} tone="orange" />
         <StatCard icon={Eye} label="Waiting for Review" value={data.stats.waitingForReview} tone="purple" />
-        <StatCard icon={CircleCheckBig} label="Completed This Month" value={data.stats.completedThisMonth} tone="green" />
+        <StatCard icon={CircleCheckBig} label={completedLabel} value={data.stats.completedThisMonth} tone="green" />
         <StatCard icon={TriangleAlert} label="Overdue" value={data.stats.overdueTasks} tone="red" />
       </div>
       <WorkChart rows={workRows} />
@@ -184,14 +270,19 @@ export function DashboardClient() {
       <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
         <Surface padded={false} className="min-w-0">
           <div className="border-b border-border px-5 py-4">
-            <SectionTitle
-              title="Today's Tasks"
-              description="Tasks assigned for today and who they're assigned to."
-            />
+            <SectionTitle title={todayTitle} description={todayDescription} />
           </div>
           {data.work.today.length === 0 ? (
             <div className="p-6">
-              <EmptyState title="No tasks for today." description="Tasks starting or due today will appear here." icon={ListTodo} />
+              <EmptyState
+                title={isCurrent ? "No tasks for today." : `No tasks in ${label}.`}
+                description={
+                  isCurrent
+                    ? "Tasks starting or due today will appear here."
+                    : "Tasks with deadlines or completions in this month will appear here."
+                }
+                icon={ListTodo}
+              />
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -241,7 +332,7 @@ export function DashboardClient() {
 
         <Surface>
           <SectionTitle
-            title="Upcoming Deadlines"
+            title={isCurrent ? "Upcoming Deadlines" : `Deadlines · ${label}`}
             action={
               <Link href="/calendar" className="inline-flex items-center gap-1 text-[13px] font-medium text-foreground">
                 View Calendar <ArrowRight className="size-3.5" />
@@ -249,7 +340,11 @@ export function DashboardClient() {
             }
           />
           {deadlines.length === 0 ? (
-            <EmptyState title="No upcoming deadlines." description="Upcoming work will appear here." icon={CalendarDays} />
+            <EmptyState
+              title={isCurrent ? "No upcoming deadlines." : `No deadlines in ${label}.`}
+              description="Upcoming work will appear here."
+              icon={CalendarDays}
+            />
           ) : (
             <div className="space-y-4">
               {deadlines.map((task) => {
@@ -401,15 +496,23 @@ export function DashboardClient() {
   );
 }
 
-function TodayList({ tasks }: { tasks: TaskRow[] }) {
+function TodayList({
+  tasks,
+  title = "Today's Tasks",
+  description = "Work assigned for today.",
+}: {
+  tasks: TaskRow[];
+  title?: string;
+  description?: string;
+}) {
   return (
     <Surface padded={false}>
       <div className="border-b border-border px-5 py-4">
-        <SectionTitle title="Today's Tasks" description="Work assigned for today." />
+        <SectionTitle title={title} description={description} />
       </div>
       {tasks.length === 0 ? (
         <div className="p-6">
-          <EmptyState title="No tasks for today." description="Tasks starting or due today will appear here." icon={ListTodo} />
+          <EmptyState title="No tasks in this period." description="Dated work for the selected month will appear here." icon={ListTodo} />
         </div>
       ) : (
         <div className="divide-y divide-border">
