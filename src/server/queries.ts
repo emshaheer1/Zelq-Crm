@@ -62,75 +62,56 @@ export async function getDashboardStats(user: AuthUser, period?: DashboardPeriod
   const { start, end, isCurrent } = resolvePeriod(period);
   const today = startOfToday();
 
-  const [
-    activeProjects,
-    tasksToday,
-    pendingTasks,
-    completedThisMonth,
-    overdueTasks,
-    waitingForReview,
-    completedToday,
-    projectsDueThisWeek,
-  ] = await Promise.all([
-    prisma.project.count({
-      where: { ...projectWhere, status: { in: ["NOT_STARTED", "IN_PROGRESS"] } },
-    }),
-    isCurrent
-      ? prisma.task.count({ where: todayTasksWhere(scope) })
-      : prisma.task.count({
-          where: {
-            ...scope,
-            status: { not: "COMPLETED" },
-            deadline: { gte: start, lte: end },
-          },
-        }),
-    prisma.task.count({
-      where: { ...scope, status: { in: ["PENDING", "IN_PROGRESS", "ON_HOLD"] } },
-    }),
-    prisma.task.count({
-      where: { ...scope, status: "COMPLETED", completedAt: { gte: start, lte: end } },
-    }),
-    isCurrent
-      ? prisma.task.count({
-          where: {
-            ...scope,
-            status: { not: "COMPLETED" },
-            deadline: { lt: today },
-          },
-        })
-      : prisma.task.count({
-          where: {
-            ...scope,
-            status: { not: "COMPLETED" },
-            deadline: { gte: start, lte: end },
-          },
-        }),
-    prisma.task.count({
-      where: { ...scope, status: "READY_FOR_REVIEW" },
-    }),
-    prisma.task.count({
-      where: {
-        ...scope,
-        status: "COMPLETED",
-        completedAt: { gte: startOfToday(), lte: endOfToday() },
-      },
-    }),
-    prisma.project.count({
-      where: {
-        ...projectWhere,
-        status: { in: ["NOT_STARTED", "IN_PROGRESS"] },
-        deadline: { gte: startOfToday(), lte: addDays(endOfToday(), 6) },
-      },
-    }),
-  ]);
+  const dueThisMonth = {
+    ...scope,
+    status: { not: "COMPLETED" as const },
+    deadline: { gte: start, lte: end },
+  };
+  const activeProjectWhere = { ...projectWhere, status: { in: ["NOT_STARTED" as const, "IN_PROGRESS" as const] } };
+
+  const dueThisMonthCount = prisma.task.count({ where: dueThisMonth });
+
+  const [byStatus, tasksToday, completedThisMonth, overdueTasks, completedToday, activeProjects, projectsDueThisWeek] =
+    await Promise.all([
+      prisma.task.groupBy({
+        by: ["status"],
+        where: scope,
+        _count: { _all: true },
+      }),
+      isCurrent ? prisma.task.count({ where: todayTasksWhere(scope) }) : dueThisMonthCount,
+      prisma.task.count({
+        where: { ...scope, status: "COMPLETED", completedAt: { gte: start, lte: end } },
+      }),
+      isCurrent
+        ? prisma.task.count({
+            where: { ...scope, status: { not: "COMPLETED" }, deadline: { lt: today } },
+          })
+        : dueThisMonthCount,
+      prisma.task.count({
+        where: {
+          ...scope,
+          status: "COMPLETED",
+          completedAt: { gte: startOfToday(), lte: endOfToday() },
+        },
+      }),
+      prisma.project.count({ where: activeProjectWhere }),
+      prisma.project.count({
+        where: {
+          ...activeProjectWhere,
+          deadline: { gte: startOfToday(), lte: addDays(endOfToday(), 6) },
+        },
+      }),
+    ]);
+
+  const statusCount = (status: string) => byStatus.find((row) => row.status === status)?._count._all ?? 0;
 
   return {
     activeProjects,
     tasksToday,
-    pendingTasks,
+    pendingTasks: statusCount("PENDING") + statusCount("IN_PROGRESS") + statusCount("ON_HOLD"),
     completedThisMonth,
     overdueTasks,
-    waitingForReview,
+    waitingForReview: statusCount("READY_FOR_REVIEW"),
     completedToday,
     projectsDueThisWeek,
   };
@@ -157,7 +138,12 @@ export async function getTeamWorkload(period?: DashboardPeriod) {
 
   const tasks = await prisma.task.findMany({
     where: {
-      OR: [{ assignedToId: { in: ids } }, { assignedById: { in: ids } }],
+      AND: [
+        { OR: [{ assignedToId: { in: ids } }, { assignedById: { in: ids } }] },
+        {
+          OR: [{ status: { not: "COMPLETED" } }, { completedAt: { gte: start, lte: end } }],
+        },
+      ],
     },
     select: {
       id: true,
@@ -217,6 +203,7 @@ export async function getUpcomingWork(user: AuthUser, period?: DashboardPeriod) 
       },
       include,
       orderBy: [{ deadline: "asc" }, { createdAt: "desc" }],
+      take: 6,
     });
     return { today: monthTasks, tomorrow: [], upcoming: [] };
   }
@@ -226,6 +213,7 @@ export async function getUpcomingWork(user: AuthUser, period?: DashboardPeriod) 
       where: todayTasksWhere(scope),
       include,
       orderBy: [{ deadline: "asc" }, { startDate: "asc" }],
+      take: 6,
     }),
     prisma.task.findMany({
       where: {
@@ -235,6 +223,7 @@ export async function getUpcomingWork(user: AuthUser, period?: DashboardPeriod) 
       },
       include,
       orderBy: { deadline: "asc" },
+      take: 6,
     }),
     prisma.task.findMany({
       where: {
@@ -244,7 +233,7 @@ export async function getUpcomingWork(user: AuthUser, period?: DashboardPeriod) 
       },
       include,
       orderBy: { deadline: "asc" },
-      take: 8,
+      take: 6,
     }),
   ]);
 
@@ -488,11 +477,7 @@ export async function getDashboardInsights(
               OR: [{ status: { not: "COMPLETED" } }, { completedAt: { gte: start, lte: end } }],
             }
           : {
-              OR: [
-                { deadline: { gte: start, lte: end } },
-                { completedAt: { gte: start, lte: end } },
-                { AND: [{ status: { not: "COMPLETED" } }, { createdAt: { lte: end } }] },
-              ],
+              OR: [{ deadline: { gte: start, lte: end } }, { completedAt: { gte: start, lte: end } }],
             },
       ],
     },

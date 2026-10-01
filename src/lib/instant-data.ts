@@ -87,7 +87,9 @@ export function useInstantData<T>(key: string, url: string) {
   );
 
   useEffect(() => {
-    void load(Boolean(peekCache(key)));
+    const cached = peekCache<T>(key);
+    setData(cached);
+    void load(Boolean(cached));
     const onUpdate = () => {
       clearPageCache(key.split(":")[0] ?? key);
       void load(true);
