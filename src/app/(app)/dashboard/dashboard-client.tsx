@@ -249,6 +249,7 @@ export function DashboardClient() {
   const deadlines = Array.from(
     new Map([...data.work.today, ...data.work.tomorrow, ...data.work.upcoming].map((task) => [task.id, task])).values(),
   ).slice(0, 6);
+  const previewTasks = data.work.today.slice(0, 6);
 
   return (
     <div className="space-y-6">
@@ -267,12 +268,20 @@ export function DashboardClient() {
       <WorkChart rows={workRows} />
       <WorkInsights data={data.insights} canOpenClients />
 
-      <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
+      <div className="grid min-w-0 items-start gap-6 2xl:grid-cols-[minmax(0,1.7fr)_minmax(300px,0.85fr)]">
         <Surface padded={false} className="min-w-0">
           <div className="border-b border-border px-5 py-4">
-            <SectionTitle title={todayTitle} description={todayDescription} />
+            <SectionTitle
+              title={todayTitle}
+              description={todayDescription}
+              action={
+                <Link href="/tasks" className="inline-flex items-center gap-1 text-[13px] font-medium text-foreground">
+                  Show all tasks <ArrowRight className="size-3.5" />
+                </Link>
+              }
+            />
           </div>
-          {data.work.today.length === 0 ? (
+          {previewTasks.length === 0 ? (
             <div className="p-6">
               <EmptyState
                 title={isCurrent ? "No tasks for today." : `No tasks in ${label}.`}
@@ -286,7 +295,7 @@ export function DashboardClient() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {data.work.today.map((task) => (
+              {previewTasks.map((task) => (
                 <div key={task.id} className="flex items-start gap-3 px-5 py-3.5">
                   <div className="min-w-0 flex-1">
                     <Link
@@ -505,18 +514,27 @@ function TodayList({
   title?: string;
   description?: string;
 }) {
+  const preview = tasks.slice(0, 6);
   return (
     <Surface padded={false}>
       <div className="border-b border-border px-5 py-4">
-        <SectionTitle title={title} description={description} />
+        <SectionTitle
+          title={title}
+          description={description}
+          action={
+            <Link href="/tasks" className="inline-flex items-center gap-1 text-[13px] font-medium text-foreground">
+              Show all tasks <ArrowRight className="size-3.5" />
+            </Link>
+          }
+        />
       </div>
-      {tasks.length === 0 ? (
+      {preview.length === 0 ? (
         <div className="p-6">
           <EmptyState title="No tasks in this period." description="Dated work for the selected month will appear here." icon={ListTodo} />
         </div>
       ) : (
         <div className="divide-y divide-border">
-          {tasks.map((task) => (
+          {preview.map((task) => (
             <Link
               key={task.id}
               href={`/tasks/${task.id}`}
